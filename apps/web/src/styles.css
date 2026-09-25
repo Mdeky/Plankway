@@ -1,0 +1,350 @@
+:root {
+  color-scheme: light dark;
+  --bg: #e9f6f5;
+  --surface: #ffffff;
+  --text: #1d3b45;
+  --muted: #58737b;
+  --accent: #ef8a3c;
+  --accent-text: #ffffff;
+  --btn: #ffffff;
+  --btn-border: #c7e1e0;
+  --shadow: 0 2px 0 rgb(29 59 69 / 0.12);
+
+  --water: #7fd1d6;
+  --water-deep: #52b4c4;
+  --water-dot: rgb(255 255 255 / 0.45);
+  --island: #f6e7b8;
+  --island-stroke: #845c3c;
+  --island-full: #a8dc8f;
+  --island-over: #f39a6b;
+  --island-text: #3b2a1a;
+  --bridge: #8a5a32;
+  --bridge-preview: #b88455;
+  --reef: #7c8791;
+  --foam: rgb(255 255 255 / 0.6);
+  --focus: #1d5fd1;
+  --hint: #ffe066;
+  --mistake: #e0452b;
+
+  --radius: 16px;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0b1426;
+    --surface: #15233d;
+    --text: #e6eefb;
+    --muted: #9fb0c9;
+    --btn: #1b2b49;
+    --btn-border: #2b3f63;
+    --shadow: 0 2px 0 rgb(0 0 0 / 0.35);
+    --water: #16305a;
+    --water-deep: #0f2345;
+    --water-dot: rgb(200 220 255 / 0.18);
+    --island: #d9c998;
+    --island-stroke: #f1e3b8;
+    --island-full: #7fbf6c;
+    --island-over: #e98556;
+    --island-text: #1d1408;
+    --bridge: #d6a877;
+    --bridge-preview: #e9c49b;
+    --reef: #8e9aa6;
+    --foam: rgb(200 220 255 / 0.25);
+    --focus: #8ab4ff;
+    --hint: #ffd84d;
+    --mistake: #ff6b4f;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  min-height: 100dvh;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: max(12px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+}
+
+h1,
+h2 {
+  margin: 0;
+}
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── Home ─────────────────────────────────────────── */
+
+.home {
+  align-items: center;
+  text-align: center;
+  padding-top: 8vh;
+}
+
+.logo svg {
+  width: 140px;
+  height: 70px;
+}
+
+.logo-island {
+  fill: var(--island);
+  stroke: var(--island-stroke);
+  stroke-width: 2.5;
+}
+
+.logo-bridge {
+  stroke: var(--bridge);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+.title {
+  font-size: clamp(2.4rem, 10vw, 3.4rem);
+  letter-spacing: -0.02em;
+}
+
+.tagline {
+  margin: 0 0 16px;
+  color: var(--muted);
+}
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(100%, 320px);
+}
+
+/* ── Buttons ──────────────────────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 2px solid var(--btn-border);
+  border-radius: 999px;
+  background: var(--btn);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.btn:hover:not(:disabled) {
+  filter: brightness(0.97);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.btn:focus-visible,
+.board:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.btn.big {
+  flex-direction: column;
+  gap: 2px;
+  min-height: 56px;
+  font-size: 1.1rem;
+  border-radius: var(--radius);
+}
+
+.btn.big small {
+  font-size: 0.8rem;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+.btn.icon {
+  width: 44px;
+  padding: 0;
+}
+
+.btn svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ── Game ─────────────────────────────────────────── */
+
+.topbar {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.topbar-title {
+  font-size: 1.15rem;
+  text-align: center;
+}
+
+.timer {
+  min-width: 44px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  text-align: right;
+}
+
+.board-frame {
+  width: 100%;
+  max-height: 70dvh;
+  margin: 0 auto;
+  border-radius: var(--radius);
+  background: radial-gradient(120% 100% at 30% 20%, var(--water) 0%, var(--water-deep) 100%);
+  overflow: hidden;
+}
+
+.board-frame.placeholder {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+.board {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: pointer;
+}
+
+.status {
+  min-height: 2.6em;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ── Dialogs ──────────────────────────────────────── */
+
+.dialog {
+  width: min(92vw, 420px);
+  border: 0;
+  border-radius: var(--radius);
+  padding: 20px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 20px 60px rgb(0 0 0 / 0.3);
+}
+
+.dialog::backdrop {
+  background: rgb(10 30 40 / 0.45);
+}
+
+.dialog h2 {
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.rules {
+  margin: 0 0 12px;
+  padding-left: 1.2em;
+  line-height: 1.45;
+}
+
+.rules li + li {
+  margin-top: 6px;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0;
+  text-align: center;
+}
+
+.stats dt {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.stats dd {
+  margin: 2px 0 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.badge {
+  margin: 0 0 12px;
+  color: var(--accent);
+  font-weight: 700;
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

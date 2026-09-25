@@ -7,7 +7,7 @@ Connect all islands with bridges; a bridge can never cross a reef.
 
 ```
 packages/core/   pure TypeScript: model, rules, solvers, generator, seeded RNG (no DOM)
-apps/web/        Vite + Preact + canvas renderer          (milestone 2)
+apps/web/        Vite + Preact + canvas renderer
 apps/api/        Cloudflare Worker (Hono) + D1            (milestone 4)
 scripts/         CLI for daily puzzle generation          (milestone 4)
 ```
@@ -21,6 +21,8 @@ pnpm install
 pnpm test        # all unit tests
 pnpm typecheck   # strict TypeScript
 pnpm bench       # generator timing per difficulty (optional: pnpm bench -- 50)
+pnpm --filter @bridgle/web dev     # play locally on http://localhost:5173
+pnpm --filter @bridgle/web build   # production build in apps/web/dist
 ```
 
 ## Core (`packages/core`)
@@ -77,3 +79,19 @@ Every generated puzzle is deterministic for a given seed and config.
 | Endless plateau, expert variant | 18 ms | 47 ms |
 
 A mid-range phone is roughly 3–5× slower, which keeps endless well under the 300 ms target.
+
+## Web app ()
+
+| Module | What it does |
+|---|---|
+|  | Immutable play state: cycle a bridge (0 → 1 → 2 → 0), undo, reset, hints, win detection. Blocks bridges that would cross. |
+|  | Owns the canvas: DPR-sharp sizing, redraws, pointer and keyboard input. |
+|  | Draws the board from CSS custom properties (light/dark). Status badges use shape as well as colour. |
+|  | Grid ↔ pixel maths and hit testing (touch targets ≥ 44 px). |
+|  | Endless puzzles are generated off the main thread; the next level is prefetched. |
+|  | Endless level, record and the game in progress (localStorage; moves to IndexedDB with daily stats). |
+|  | All UI strings, English and Dutch. |
+
+Controls: drag from island to island (or just drag in a direction), tap an island and then a
+neighbour, or tap a bridge. Keyboard: arrows move between islands, space selects, an arrow then
+builds in that direction, Esc cancels.
