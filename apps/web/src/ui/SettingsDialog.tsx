@@ -2,6 +2,8 @@ import { useState } from 'preact/hooks';
 import { getLang, t, type Lang } from '../i18n.ts';
 import { isSoundOn, setSoundOn } from '../game/sound.ts';
 import { getThemePref, setThemePref, type ThemePref } from '../game/theme.ts';
+import { adsEnabled } from '../ads/config.ts';
+import { openPrivacyChoices } from '../ads/loader.ts';
 import { Dialog } from './Dialog.tsx';
 
 interface Props {
@@ -71,6 +73,12 @@ export function SettingsDialog({ onClose, onLangChange }: Props) {
       </fieldset>
 
       <p class="muted">{t('settings.motion')}</p>
+
+      {(adsEnabled('board') || adsEnabled('result')) && (
+        <button class="btn" onClick={() => openPrivacyChoices()}>
+          {t('settings.privacy')}
+        </button>
+      )}
 
       <div class="dialog-actions">
         <button class="btn primary" onClick={onClose}>

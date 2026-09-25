@@ -717,3 +717,97 @@ h2 {
 .update-banner span {
   flex: 1;
 }
+
+/* ── Pages, footer, ads ───────────────────────────── */
+
+.site-footer {
+  margin-top: 32px;
+  padding: 16px 0 8px;
+  border-top: 1px solid var(--btn-border);
+}
+
+.site-footer nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 8px;
+}
+
+.site-footer a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 8px;
+  color: var(--muted);
+  font-size: 0.92rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.site-footer a:hover,
+.site-footer a:focus-visible {
+  color: var(--text);
+}
+
+.home .site-footer {
+  width: 100%;
+}
+
+.page-topbar {
+  grid-template-columns: 44px 1fr 44px;
+}
+
+.prose {
+  line-height: 1.6;
+}
+
+.prose h2 {
+  margin: 24px 0 8px;
+  font-size: 1.15rem;
+}
+
+.prose p,
+.prose ul {
+  margin: 0 0 12px;
+}
+
+.prose ul {
+  padding-left: 1.2em;
+}
+
+.prose li + li {
+  margin-top: 6px;
+}
+
+.prose .lead {
+  font-size: 1.05rem;
+}
+
+.ad-slot {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  margin: 8px 0 0;
+  border-radius: 12px;
+  background: rgb(127 127 127 / 0.08);
+  overflow: hidden;
+}
+
+.ad-label {
+  position: absolute;
+  top: 4px;
+  left: 8px;
+  color: var(--muted);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ad-slot ins {
+  width: 100%;
+}
+
+.dialog .ad-slot {
+  margin: 16px 0 4px;
+}

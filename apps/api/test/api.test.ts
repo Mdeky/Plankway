@@ -102,6 +102,15 @@ describe('profiles', () => {
     expect(keys.some((k) => k.includes('198.51'))).toBe(false);
   });
 
+  it('forgets rate-limit entries (hashed IPs) after 24 hours', async () => {
+    await client('198.51.100.9').call('POST', '/api/profile');
+    expect(env.DB.raw.prepare('SELECT COUNT(*) AS n FROM rate_limits').get()!.n).toBe(1);
+    clock += 25 * 3_600_000;
+    await client('198.51.100.10').call('POST', '/api/profile');
+    const keys = env.DB.raw.prepare('SELECT key FROM rate_limits').all();
+    expect(keys).toHaveLength(1);
+  });
+
   it('refuses to run without a pepper secret', async () => {
     env.HASH_PEPPER = undefined;
     expect((await client().call('POST', '/api/profile')).status).toBe(500);

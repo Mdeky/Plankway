@@ -16,7 +16,8 @@
     "daily:generate": "node scripts/generate-daily.ts",
     "build:web": "pnpm --filter @bridgle/web build",
     "check:bundle": "pnpm build:web && node scripts/check-bundle.ts",
-    "icons": "node scripts/make-icons.ts"
+    "icons": "node scripts/make-icons.ts",
+    "check:launch": "node scripts/check-launch.ts"
   },
   "devDependencies": {
     "typescript": "^5.9.3",

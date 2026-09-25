@@ -197,3 +197,20 @@ Without `--apply` it only writes SQL to `scripts/out/`.
 
 Local production check: `pnpm build:web && pnpm --filter @bridgle/web preview` (http://localhost:4173,
 `/api` is proxied to `pnpm dev:api`).
+
+## Ads, consent and legal pages
+
+- **Ads are off by default.** Set `VITE_ADSENSE_CLIENT` and the slot ids in
+  `apps/web/.env.production.local` (see `.env.example`). Without them no ad or consent script
+  is ever loaded.
+- `AdSlot` reserves its height (no layout shift) and only appears below the board and in the
+  result dialog. Endless shows a closable interstitial between levels every
+  `VITE_AD_INTERSTITIAL_EVERY` solved levels, never during a puzzle.
+- Scripts load lazily when a slot scrolls into view: first Google's certified CMP (IAB TCF v2.2),
+  then — once the player has made a choice or a stored choice is loaded — AdSense. Personalized /
+  non-personalized / no ads follows the CMP's TC string. Settings → Privacy choices reopens it.
+- Pages with their own URL: `/how-to-play`, `/about`, `/privacy`, `/cookies` (loaded on demand).
+  Texts live in `apps/web/src/content/pages.ts` (NL + EN) and describe what the app and API
+  actually do. **Draft — have them reviewed.** The controller details are in
+  `apps/web/src/content/legal.ts`.
+- `pnpm check:launch` lists what still has to be filled in before going live.

@@ -5,6 +5,7 @@ import { t, techniqueKey } from '../i18n.ts';
 import { cycleEdge, hint, reset, statuses, undo, type Session } from '../game/session.ts';
 import { isSoundOn, setSoundOn, sfx, SOUND_EVENT } from '../game/sound.ts';
 import type { BoardView, ViewModel } from '../game/view.ts';
+import { AdSlot } from './AdSlot.tsx';
 import { BoardCanvas } from './BoardCanvas.tsx';
 import { formatTime, useTimer } from './hooks.ts';
 
@@ -199,6 +200,9 @@ export function GameScreen({ title, session, placeholder, initialMs, onChange, o
         </button>
         {extraActions}
       </nav>
+
+      {/* Ads only below the board and toolbar, never on the board. */}
+      <AdSlot placement="board" />
 
       {!celebrating && children}
     </main>

@@ -1,4 +1,5 @@
 import { t } from '../i18n.ts';
+import { navigate } from '../route.ts';
 import { Dialog } from './Dialog.tsx';
 
 export function HowTo({ onClose }: { onClose(): void }) {
@@ -13,6 +14,15 @@ export function HowTo({ onClose }: { onClose(): void }) {
       </ul>
       <p class="muted">{t('howto.controls')}</p>
       <div class="dialog-actions">
+        <button
+          class="btn"
+          onClick={() => {
+            onClose();
+            navigate('how-to-play');
+          }}
+        >
+          {t('howto.more')}
+        </button>
         <button class="btn primary" onClick={onClose}>
           {t('common.close')}
         </button>

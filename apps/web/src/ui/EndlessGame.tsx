@@ -11,7 +11,9 @@ import {
   saveEndlessProgress,
   type EndlessProgress,
 } from '../game/storage.ts';
+import { interstitialDue } from '../ads/config.ts';
 import { Dialog } from './Dialog.tsx';
+import { Interstitial } from './Interstitial.tsx';
 import { GameScreen } from './GameScreen.tsx';
 import { formatTime } from './format.ts';
 
@@ -37,6 +39,8 @@ export function EndlessGame({ onExit }: { onExit(): void }) {
   const [game, setGame] = useState<Loaded | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [win, setWin] = useState<Win | null>(null);
+  /** Level to start after the between-levels ad (endless only, every N levels). */
+  const [breakBefore, setBreakBefore] = useState<number | null>(null);
   /** Puzzle whose win was already handled (moves can arrive faster than renders). */
   const finished = useRef<object | null>(null);
 
@@ -146,13 +150,23 @@ export function EndlessGame({ onExit }: { onExit(): void }) {
               autofocus
               onClick={() => {
                 setWin(null);
-                void start(win.level + 1);
+                if (interstitialDue(progress.solved)) setBreakBefore(win.level + 1);
+                else void start(win.level + 1);
               }}
             >
               {t('win.next')}
             </button>
           </div>
         </Dialog>
+      )}
+      {breakBefore !== null && (
+        <Interstitial
+          onContinue={() => {
+            const next = breakBefore;
+            setBreakBefore(null);
+            void start(next);
+          }}
+        />
       )}
     </GameScreen>
   );

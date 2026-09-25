@@ -76,6 +76,8 @@ export function createApp(options: AppOptions = {}) {
     )
       .bind(key, win)
       .first<{ count: number }>();
+    // Hashed IPs are kept for at most 24 hours (promised in the privacy policy).
+    await c.env.DB.prepare('DELETE FROM rate_limits WHERE win < ?').bind(win - 24).run();
     if ((row?.count ?? 0) > RATE_LIMITS[action]) fail(429, 'rate-limited');
   };
 

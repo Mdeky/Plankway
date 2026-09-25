@@ -17,6 +17,7 @@ import { createSession, type Session } from '../game/session.ts';
 import { shareResult, shareText, type ShareOutcome } from '../game/share.ts';
 import { syncResults } from '../game/sync.ts';
 import type { DailyRecord, DailyStats } from '../game/stats.ts';
+import { AdSlot } from './AdSlot.tsx';
 import { Dialog } from './Dialog.tsx';
 import { GameScreen } from './GameScreen.tsx';
 import { Countdown, StatsPanel } from './StatsPanel.tsx';
@@ -216,6 +217,7 @@ function ResultDialog({
       <p class="status" role="status" aria-live="polite">
         {shared === 'copied' ? t('share.copied') : shared === 'failed' ? t('share.failed') : ''}
       </p>
+      <AdSlot placement="result" />
       <hr />
       <StatsPanel stats={stats} />
       {newDay ? (
