@@ -1,7 +1,7 @@
 import { t } from '../i18n.ts';
 import { formatTime } from '../ui/format.ts';
 
-export const SITE_URL: string = import.meta.env?.VITE_SITE_URL ?? 'bridgle.com';
+export const SITE_URL: string = import.meta.env?.VITE_SITE_URL ?? 'plankway.com';
 
 export interface ShareInput {
   number: number;
@@ -22,7 +22,7 @@ export function islandRow(undos: number, hints: number): string {
 export function shareText({ number, timeMs, undos, hints }: ShareInput, url = SITE_URL): string {
   let line2 = `${islandRow(undos, hints)} ${t(undos === 1 ? 'share.undo' : 'share.undos', { n: undos })}`;
   if (hints > 0) line2 += ` · 💡 ${t(hints === 1 ? 'share.hint' : 'share.hints', { n: hints })}`;
-  return [`Bridgle #${number} 🌉 ${formatTime(timeMs)}`, line2, url].join('\n');
+  return [`Plankway #${number} 🌉 ${formatTime(timeMs)}`, line2, url].join('\n');
 }
 
 export type ShareOutcome = 'shared' | 'copied' | 'failed';

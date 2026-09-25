@@ -145,7 +145,7 @@ export function DailyGame({ onExit }: { onExit(): void }) {
 
   return (
     <GameScreen
-      title={`Bridgle #${number}`}
+      title={`Plankway #${number}`}
       session={game?.session ?? null}
       placeholder={error ?? t('game.generating')}
       initialMs={game?.initialMs ?? 0}

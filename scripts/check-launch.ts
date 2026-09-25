@@ -19,13 +19,13 @@ for (const [key, value] of Object.entries(LEGAL)) {
 
 const wrangler = readFileSync(join(root, 'apps', 'api', 'wrangler.toml'), 'utf8');
 if (wrangler.includes('00000000-0000-0000-0000-000000000000')) {
-  blocking.push('apps/api/wrangler.toml: database_id is still the placeholder (run `wrangler d1 create bridgle`)');
+  blocking.push('apps/api/wrangler.toml: database_id is still the placeholder (run `wrangler d1 create plankway`)');
 }
 
 const envFile = join(root, 'apps', 'web', '.env.production.local');
 const env = existsSync(envFile) ? readFileSync(envFile, 'utf8') : '';
 const envValue = (name: string) => env.match(new RegExp(`^${name}=(.*)$`, 'm'))?.[1]?.trim() ?? '';
-if (!envValue('VITE_SITE_URL')) warnings.push('VITE_SITE_URL not set in apps/web/.env.production.local (share text uses bridgle.com)');
+if (!envValue('VITE_SITE_URL')) warnings.push('VITE_SITE_URL not set in apps/web/.env.production.local (share text uses plankway.com)');
 if (!envValue('VITE_ADSENSE_CLIENT')) warnings.push('No AdSense publisher id: the site launches without ads');
 
 for (const w of warnings) console.log(`⚠  ${w}`);

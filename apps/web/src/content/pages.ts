@@ -25,8 +25,8 @@ const L = LEGAL;
 
 const nl: Record<PageId, Page> = {
   'how-to-play': {
-    title: 'Hoe speel je Bridgle',
-    intro: 'Bridgle is een logische puzzel: verbind alle eilanden met bruggen. Je hoeft nooit te gokken.',
+    title: 'Hoe speel je Plankway',
+    intro: 'Plankway is een logische puzzel: verbind alle eilanden met bruggen. Je hoeft nooit te gokken.',
     sections: [
       {
         h: 'De regels',
@@ -67,38 +67,38 @@ const nl: Record<PageId, Page> = {
       {
         h: 'Daily en Eindeloos',
         body: [
-          'Elke dag is er één Bridgle, dezelfde voor iedereen. Maandag is het makkelijkst, zondag het moeilijkst. Je reeks groeit met elke dag dat je hem oplost.',
+          'Elke dag is er één Plankway, dezelfde voor iedereen. Maandag is het makkelijkst, zondag het moeilijkst. Je reeks groeit met elke dag dat je hem oplost.',
           'In Eindeloos speel je zoveel puzzels als je wil, steeds een beetje moeilijker. Daar mag je hints gebruiken zoveel je wil.',
         ],
       },
     ],
   },
   about: {
-    title: 'Over Bridgle',
+    title: 'Over Plankway',
     sections: [
       {
-        h: 'Wat is Bridgle?',
+        h: 'Wat is Plankway?',
         body: [
-          'Bridgle is een korte, dagelijkse puzzel gebaseerd op het klassieke bruggenpuzzeltje (Hashiwokakero), met een eigen twist: riffen. Elke puzzel heeft precies één oplossing en is op te lossen met pure logica.',
+          'Plankway is een korte, dagelijkse puzzel gebaseerd op het klassieke bruggenpuzzeltje (Hashiwokakero), met een eigen twist: riffen. Elke puzzel heeft precies één oplossing en is op te lossen met pure logica.',
           'Een puzzel duurt een paar minuten. Je kan ook offline spelen en de app op je gsm installeren.',
         ],
       },
       {
         h: 'Gratis, met advertenties',
         body: [
-          'Bridgle is gratis. Om de kosten te dekken tonen we advertenties onder het speelveld en in het resultaatscherm — nooit op het speelveld zelf en nooit midden in een puzzel.',
+          'Plankway is gratis. Om de kosten te dekken tonen we advertenties onder het speelveld en in het resultaatscherm — nooit op het speelveld zelf en nooit midden in een puzzel.',
         ],
       },
       {
         h: 'Wie zit erachter?',
-        body: [`Bridgle wordt gemaakt door ${L.controller}. Vragen of ideeën? Mail naar ${L.email}.`],
+        body: [`Plankway wordt gemaakt door ${L.controller}. Vragen of ideeën? Mail naar ${L.email}.`],
       },
     ],
   },
   privacy: {
     title: 'Privacybeleid',
     updated: true,
-    intro: 'Bridgle verzamelt zo weinig mogelijk. Je hebt geen account, e-mailadres of wachtwoord nodig.',
+    intro: 'Plankway verzamelt zo weinig mogelijk. Je hebt geen account, e-mailadres of wachtwoord nodig.',
     sections: [
       {
         h: 'Wie is verantwoordelijk?',
@@ -162,13 +162,13 @@ const nl: Record<PageId, Page> = {
   cookies: {
     title: 'Cookiebeleid',
     updated: true,
-    intro: 'Bridgle gebruikt zo weinig mogelijk cookies. Hieronder staat precies welke.',
+    intro: 'Plankway gebruikt zo weinig mogelijk cookies. Hieronder staat precies welke.',
     sections: [
       {
         h: 'Noodzakelijk (geen toestemming nodig)',
         body: [
           [
-            'bridgle_token — onze eigen cookie met de geheime sleutel van je anonieme profiel. Enkel leesbaar door onze server (HttpOnly, Secure). Bewaard tot 400 dagen.',
+            'plankway_token — onze eigen cookie met de geheime sleutel van je anonieme profiel. Enkel leesbaar door onze server (HttpOnly, Secure). Bewaard tot 400 dagen.',
             'Opslag in je browser (localStorage/IndexedDB) voor je voortgang, statistieken, instellingen en herstelcode. Dat zijn technisch geen cookies, maar ze blijven ook op je toestel.',
           ],
         ],
@@ -188,7 +188,7 @@ const nl: Record<PageId, Page> = {
         body: [
           [
             'Advertentietoestemming aanpassen of intrekken: Instellingen → Privacykeuzes.',
-            'Al je Bridgle-gegevens wissen: Profiel → Mijn data wissen.',
+            'Al je Plankway-gegevens wissen: Profiel → Mijn data wissen.',
             'Cookies kan je ook in je browser bekijken en verwijderen.',
           ],
         ],
@@ -199,8 +199,8 @@ const nl: Record<PageId, Page> = {
 
 const en: Record<PageId, Page> = {
   'how-to-play': {
-    title: 'How to play Bridgle',
-    intro: 'Bridgle is a logic puzzle: connect all islands with bridges. You never need to guess.',
+    title: 'How to play Plankway',
+    intro: 'Plankway is a logic puzzle: connect all islands with bridges. You never need to guess.',
     sections: [
       {
         h: 'The rules',
@@ -241,38 +241,38 @@ const en: Record<PageId, Page> = {
       {
         h: 'Daily and Endless',
         body: [
-          'Every day there is one Bridgle, the same for everyone. Monday is the easiest, Sunday the hardest. Your streak grows with every day you solve it.',
+          'Every day there is one Plankway, the same for everyone. Monday is the easiest, Sunday the hardest. Your streak grows with every day you solve it.',
           'In Endless you play as many puzzles as you like, each a little harder. Use as many hints as you want there.',
         ],
       },
     ],
   },
   about: {
-    title: 'About Bridgle',
+    title: 'About Plankway',
     sections: [
       {
-        h: 'What is Bridgle?',
+        h: 'What is Plankway?',
         body: [
-          'Bridgle is a short daily puzzle based on the classic bridges puzzle (Hashiwokakero), with a twist of its own: reefs. Every puzzle has exactly one solution and can be solved with pure logic.',
+          'Plankway is a short daily puzzle based on the classic bridges puzzle (Hashiwokakero), with a twist of its own: reefs. Every puzzle has exactly one solution and can be solved with pure logic.',
           'A puzzle takes a few minutes. You can also play offline and install the app on your phone.',
         ],
       },
       {
         h: 'Free, with ads',
         body: [
-          'Bridgle is free. To cover the costs we show ads below the board and on the result screen — never on the board itself and never in the middle of a puzzle.',
+          'Plankway is free. To cover the costs we show ads below the board and on the result screen — never on the board itself and never in the middle of a puzzle.',
         ],
       },
       {
         h: 'Who makes it?',
-        body: [`Bridgle is made by ${L.controller}. Questions or ideas? Write to ${L.email}.`],
+        body: [`Plankway is made by ${L.controller}. Questions or ideas? Write to ${L.email}.`],
       },
     ],
   },
   privacy: {
     title: 'Privacy policy',
     updated: true,
-    intro: 'Bridgle collects as little as possible. You don’t need an account, e-mail address or password.',
+    intro: 'Plankway collects as little as possible. You don’t need an account, e-mail address or password.',
     sections: [
       {
         h: 'Who is responsible?',
@@ -334,13 +334,13 @@ const en: Record<PageId, Page> = {
   cookies: {
     title: 'Cookie policy',
     updated: true,
-    intro: 'Bridgle uses as few cookies as possible. Here is exactly which ones.',
+    intro: 'Plankway uses as few cookies as possible. Here is exactly which ones.',
     sections: [
       {
         h: 'Necessary (no consent needed)',
         body: [
           [
-            'bridgle_token — our own cookie with the secret key of your anonymous profile. Only readable by our server (HttpOnly, Secure). Kept for up to 400 days.',
+            'plankway_token — our own cookie with the secret key of your anonymous profile. Only readable by our server (HttpOnly, Secure). Kept for up to 400 days.',
             'Browser storage (localStorage/IndexedDB) for your progress, statistics, settings and recovery code. Technically not cookies, but they also stay on your device.',
           ],
         ],
@@ -360,7 +360,7 @@ const en: Record<PageId, Page> = {
         body: [
           [
             'Change or withdraw ad consent: Settings → Privacy choices.',
-            'Delete all your Bridgle data: Profile → Delete my data.',
+            'Delete all your Plankway data: Profile → Delete my data.',
             'You can also view and delete cookies in your browser.',
           ],
         ],

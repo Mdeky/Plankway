@@ -53,8 +53,8 @@ const last = Math.max(1, puzzleNumber(dateAtOffset(14))) + days;
 let existing = new Set<number>();
 if (apply) {
   const target = `--${apply}`;
-  wrangler(['d1', 'migrations', 'apply', 'bridgle', target]);
-  const out = wrangler(['d1', 'execute', 'bridgle', target, '--json', '--command', `"SELECT number FROM puzzles WHERE number >= ${first}"`]);
+  wrangler(['d1', 'migrations', 'apply', 'plankway', target]);
+  const out = wrangler(['d1', 'execute', 'plankway', target, '--json', '--command', `"SELECT number FROM puzzles WHERE number >= ${first}"`]);
   const parsed = JSON.parse(out.slice(out.indexOf('['))) as { results: { number: number }[] }[];
   existing = new Set(parsed.flatMap((r) => r.results.map((row) => row.number)));
 }
@@ -82,6 +82,6 @@ writeFileSync(file, sql.join('\n') + '\n');
 console.log(`Wrote ${sql.length} puzzles to ${file}`);
 
 if (apply) {
-  wrangler(['d1', 'execute', 'bridgle', `--${apply}`, '--file', `"${file}"`, ...(apply === 'remote' ? ['--yes'] : [])]);
+  wrangler(['d1', 'execute', 'plankway', `--${apply}`, '--file', `"${file}"`, ...(apply === 'remote' ? ['--yes'] : [])]);
   console.log(`Applied to ${apply} D1.`);
 }

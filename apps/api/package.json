@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev --local --port 8787",
-    "db:migrate:local": "wrangler d1 migrations apply bridgle --local",
-    "db:migrate:remote": "wrangler d1 migrations apply bridgle --remote",
+    "db:migrate:local": "wrangler d1 migrations apply plankway --local",
+    "db:migrate:remote": "wrangler d1 migrations apply plankway --remote",
     "deploy": "wrangler deploy",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json"

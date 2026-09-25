@@ -1,4 +1,4 @@
-# Bridgle
+# Plankway
 
 A light daily browser puzzle based on Hashiwokakero ("Bridges"), with a twist: **reefs**.
 Connect all islands with bridges; a bridge can never cross a reef.
@@ -109,7 +109,7 @@ builds in that direction, Esc cancels.
 
 ## Daily mode
 
-- **Numbering:** Bridgle #1 = 2026-09-25 (`LAUNCH_DATE` in `packages/core/src/daily.ts`). The number
+- **Numbering:** Plankway #1 = 2026-09-25 (`LAUNCH_DATE` in `packages/core/src/daily.ts`). The number
   follows the player's *local* calendar date, like a newspaper.
 - **Difficulty:** by weekday, Monday easiest → Sunday hardest (`DAILY_PRESETS`).
 - **Same puzzle for everyone:** `generateDaily(n)` uses seed `bridgle-daily-<n>`. Until the API exists
@@ -121,12 +121,12 @@ builds in that direction, Esc cancels.
 - **Share text** (no spoilers): five islands, and hints and undos wash some away.
 
 ```
-Bridgle #42 🌉 2:31
+Plankway #42 🌉 2:31
 🏝️🏝️🏝️🏝️🏝️ 0 undos
-bridgle.com
+plankway.com
 ```
 
-The URL in the share text comes from `VITE_SITE_URL` (default `bridgle.com`).
+The URL in the share text comes from `VITE_SITE_URL` (default `plankway.com`).
 
 ## API (`apps/api`)
 
@@ -156,7 +156,7 @@ Without `--apply` it only writes SQL to `scripts/out/`.
 ### Deploying (not done yet — needs a Cloudflare account)
 
 1. `pnpm --filter @bridgle/api exec wrangler login`
-2. `pnpm --filter @bridgle/api exec wrangler d1 create bridgle` → put the id in `apps/api/wrangler.toml`
+2. `pnpm --filter @bridgle/api exec wrangler d1 create plankway` → put the id in `apps/api/wrangler.toml`
 3. `pnpm --filter @bridgle/api db:migrate:remote`
 4. `pnpm --filter @bridgle/api exec wrangler secret put HASH_PEPPER` (long random value)
 5. `pnpm --filter @bridgle/api deploy`

@@ -15,7 +15,7 @@ import {
 import type { Env } from './db.ts';
 import { keyedHash, newRecoveryCode, newToken, normalizeRecoveryCode } from './security.ts';
 
-export const COOKIE_NAME = 'bridgle_token';
+export const COOKIE_NAME = 'plankway_token';
 const COOKIE_MAX_AGE = 400 * 24 * 3600; // the longest browsers accept
 
 /** Requests per hour. */

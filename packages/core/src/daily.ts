@@ -8,7 +8,7 @@ export interface CalendarDate {
   d: number;
 }
 
-/** Bridgle #1. */
+/** Plankway #1. */
 export const LAUNCH_DATE: CalendarDate = { y: 2026, m: 9, d: 25 };
 
 const DAY_MS = 86_400_000;

@@ -13,7 +13,7 @@ import {
 } from '../src/index.ts';
 
 describe('daily numbering', () => {
-  it('launch day is Bridgle #1', () => {
+  it('launch day is Plankway #1', () => {
     expect(formatDate(LAUNCH_DATE)).toBe('2026-09-25');
     expect(puzzleNumber(LAUNCH_DATE)).toBe(1);
     expect(puzzleNumber({ y: 2026, m: 9, d: 26 })).toBe(2);

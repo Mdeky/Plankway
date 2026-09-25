@@ -1,4 +1,4 @@
-/* Bridgle service worker. The bridgle-sw plugin in vite.config.ts fills in the two
+/* Plankway service worker. The bridgle-sw plugin in vite.config.ts fills in the two
  * placeholders below with the build hash and the list of built files. */
 const VERSION = __VERSION__;
 const PRECACHE = __PRECACHE__;

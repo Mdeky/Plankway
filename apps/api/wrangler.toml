@@ -1,4 +1,4 @@
-name = "bridgle-api"
+name = "plankway-api"
 main = "src/index.ts"
 compatibility_date = "2025-09-01"
 
@@ -6,8 +6,8 @@ compatibility_date = "2025-09-01"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "bridgle"
-# Replace with the real id from `wrangler d1 create bridgle` before deploying.
+database_name = "plankway"
+# Replace with the real id from `wrangler d1 create plankway` before deploying.
 database_id = "00000000-0000-0000-0000-000000000000"
 migrations_dir = "migrations"
 

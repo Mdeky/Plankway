@@ -36,7 +36,7 @@ function run(label: string, config: GeneratorConfig) {
   );
 }
 
-console.log(`Bridgle generator benchmark (${samples} puzzles per row)\n`);
+console.log(`Plankway generator benchmark (${samples} puzzles per row)\n`);
 DAILY_PRESETS.forEach((preset, i) => run(`daily ${days[i]}`, preset));
 console.log('');
 for (const level of [1, 5, 10, 15, 20, 25, 30, 40, 50]) run(`endless ${level}`, endlessConfig(level));

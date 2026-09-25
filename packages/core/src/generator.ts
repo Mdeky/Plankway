@@ -65,7 +65,7 @@ export function generatePuzzle(config: GeneratorConfig, seed: string, id = seed)
     if (!best || candidate.report.score > best.report.score) best = candidate;
   }
   if (best) return best;
-  throw new Error(`Bridgle generator: no valid puzzle for seed "${seed}" after ${maxAttempts} attempts`);
+  throw new Error(`Plankway generator: no valid puzzle for seed "${seed}" after ${maxAttempts} attempts`);
 }
 
 function attempt(

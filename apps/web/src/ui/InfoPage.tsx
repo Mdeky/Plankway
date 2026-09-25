@@ -9,9 +9,9 @@ export function InfoPage({ id }: { id: PageId }) {
   const content = page(getLang(), id);
 
   useEffect(() => {
-    document.title = `${content.title} · Bridgle`;
+    document.title = `${content.title} · Plankway`;
     return () => {
-      document.title = 'Bridgle – daily bridges puzzle';
+      document.title = 'Plankway – daily bridges puzzle';
     };
   }, [id]);
 
