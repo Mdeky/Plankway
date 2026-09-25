@@ -80,17 +80,17 @@ Every generated puzzle is deterministic for a given seed and config.
 
 A mid-range phone is roughly 3–5× slower, which keeps endless well under the 300 ms target.
 
-## Web app ()
+## Web app (`apps/web`)
 
 | Module | What it does |
 |---|---|
-|  | Immutable play state: cycle a bridge (0 → 1 → 2 → 0), undo, reset, hints, win detection. Blocks bridges that would cross. |
-|  | Owns the canvas: DPR-sharp sizing, redraws, pointer and keyboard input. |
-|  | Draws the board from CSS custom properties (light/dark). Status badges use shape as well as colour. |
-|  | Grid ↔ pixel maths and hit testing (touch targets ≥ 44 px). |
-|  | Endless puzzles are generated off the main thread; the next level is prefetched. |
-|  | Endless level, record and the game in progress (localStorage; moves to IndexedDB with daily stats). |
-|  | All UI strings, English and Dutch. |
+| `game/session.ts` | Immutable play state: cycle a bridge (0 → 1 → 2 → 0), undo, reset, hints, win detection. Blocks bridges that would cross. |
+| `game/view.ts` | Owns the canvas: DPR-sharp sizing, redraws, pointer and keyboard input. |
+| `game/renderer.ts` | Draws the board from CSS custom properties (light/dark). Status badges use shape as well as colour. |
+| `game/layout.ts` | Grid ↔ pixel maths and hit testing (touch targets ≥ 44 px). |
+| `workers/generator.worker.ts` | Endless puzzles are generated off the main thread; the next level is prefetched. |
+| `game/storage.ts` | Endless level, record and the game in progress (localStorage; moves to IndexedDB with daily stats). |
+| `i18n.ts` | All UI strings, English and Dutch. |
 
 Controls: drag from island to island (or just drag in a direction), tap an island and then a
 neighbour, or tap a bridge. Keyboard: arrows move between islands, space selects, an arrow then
