@@ -161,3 +161,18 @@ Without `--apply` it only writes SQL to `scripts/out/`.
 4. `pnpm --filter @bridgle/api exec wrangler secret put HASH_PEPPER` (long random value)
 5. `pnpm --filter @bridgle/api deploy`
 6. GitHub secrets `CLOUDFLARE_API_TOKEN` (D1 edit rights) and `CLOUDFLARE_ACCOUNT_ID` for the cron.
+
+## Look & feel (`apps/web/src/game`)
+
+| Module | What it does |
+|---|---|
+| `art.ts` | Canvas drawing primitives: seeded island blobs (sand + grass), palms/rocks/huts, reef rocks with foam, wooden plank bridges with rope rails, waves, boat and gulls. |
+| `renderer.ts` | Composes a frame: sea (+ moonlight at night), waves, reefs, bridges with build/fade animations, splashes, islands with number signs and status flags, win scene. |
+| `view.ts` | Frame loop: idle water at ~20 fps, 60 fps only while something animates. Win celebration is skippable (tap or any key). |
+| `theme.ts` | Day/night: follows `prefers-color-scheme`, with a manual override (`data-theme` on `<html>`). |
+| `sound.ts` | Synthesized effects with Web Audio (plank clicks, splash, bonk, hint, win). No audio files. |
+
+- All colours are CSS custom properties (`styles.css`), one set for day and one for night.
+- `prefers-reduced-motion`: no waves, no pulsing, no plank/splash animation, no win scene.
+- Status is never colour-only: a flag on complete islands, a "!" badge and red ring when over.
+- Screen readers get announcements for focus, selection, every bridge change and the win.

@@ -37,6 +37,24 @@ const en = {
   'howto.controls':
     'Drag from one island to another to build a bridge. Drag again for a double bridge, a third time to remove it. You can also tap an island and then a neighbour, or tap a bridge. Keyboard: arrows to move, space to pick an island, then an arrow to build.',
   'common.cancel': 'Cancel',
+  'menu.settings': 'Settings',
+  'settings.title': 'Settings',
+  'settings.theme': 'Look',
+  'settings.themeSystem': 'Follow my device',
+  'settings.themeLight': 'Day',
+  'settings.themeDark': 'Night',
+  'settings.sound': 'Sound',
+  'settings.soundOn': 'Sound effects',
+  'settings.language': 'Language',
+  'settings.motion': 'Animations follow your device’s “reduce motion” setting.',
+  'game.mute': 'Sound off',
+  'game.unmute': 'Sound on',
+  'win.skip': 'Tap to continue',
+  'a11y.island': 'Island {n}, row {row}, column {col}. {have} of {n} bridges.',
+  'a11y.islandShort': '{n} at row {row}, column {col}',
+  'a11y.selected': ' Selected: press an arrow key to build a bridge.',
+  'a11y.bridge': '{count} bridges between island {a} and island {b}.',
+  'a11y.solved': 'Puzzle solved!',
   'menu.profile': 'Profile',
   'profile.title': 'Your profile',
   'profile.intro': 'Bridgle keeps an anonymous profile for your daily results and streak. No e-mail, no password.',
@@ -128,6 +146,24 @@ const nl: Record<MessageKey, string> = {
   'howto.controls':
     'Sleep van een eiland naar een ander om een brug te leggen. Nog eens slepen geeft een dubbele brug, een derde keer haalt ze weg. Je kan ook op een eiland tikken en daarna op een buur, of op een brug tikken. Toetsenbord: pijltjes om te bewegen, spatie om een eiland te kiezen, dan een pijltje om te bouwen.',
   'common.cancel': 'Annuleren',
+  'menu.settings': 'Instellingen',
+  'settings.title': 'Instellingen',
+  'settings.theme': 'Uitzicht',
+  'settings.themeSystem': 'Zoals mijn toestel',
+  'settings.themeLight': 'Dag',
+  'settings.themeDark': 'Nacht',
+  'settings.sound': 'Geluid',
+  'settings.soundOn': 'Geluidseffecten',
+  'settings.language': 'Taal',
+  'settings.motion': 'Animaties volgen de instelling “beweging beperken” van je toestel.',
+  'game.mute': 'Geluid uit',
+  'game.unmute': 'Geluid aan',
+  'win.skip': 'Tik om verder te gaan',
+  'a11y.island': 'Eiland {n}, rij {row}, kolom {col}. {have} van {n} bruggen.',
+  'a11y.islandShort': '{n} op rij {row}, kolom {col}',
+  'a11y.selected': ' Gekozen: druk op een pijltje om een brug te bouwen.',
+  'a11y.bridge': '{count} bruggen tussen eiland {a} en eiland {b}.',
+  'a11y.solved': 'Puzzel opgelost!',
   'menu.profile': 'Profiel',
   'profile.title': 'Jouw profiel',
   'profile.intro': 'Bridgle bewaart een anoniem profiel voor je daily-resultaten en reeks. Geen e-mail, geen wachtwoord.',
@@ -183,15 +219,31 @@ const nl: Record<MessageKey, string> = {
 const catalogs = { en, nl } as const;
 export type Lang = keyof typeof catalogs;
 
+const LANG_KEY = 'bridgle.lang.v1';
+
 function detect(): Lang {
+  try {
+    const saved = localStorage.getItem(LANG_KEY);
+    if (saved === 'en' || saved === 'nl') return saved;
+  } catch {
+    // ignore
+  }
   const langs = typeof navigator === 'undefined' ? [] : navigator.languages ?? [navigator.language];
   return langs.some((l) => l?.toLowerCase().startsWith('nl')) ? 'nl' : 'en';
 }
 
 let lang: Lang = detect();
 
-export function setLang(next: Lang): void {
+/** With remember = true the choice is stored; otherwise the browser language is used. */
+export function setLang(next: Lang, remember = false): void {
   lang = next;
+  if (remember) {
+    try {
+      localStorage.setItem(LANG_KEY, next);
+    } catch {
+      // ignore
+    }
+  }
   if (typeof document !== 'undefined') document.documentElement.lang = next;
 }
 

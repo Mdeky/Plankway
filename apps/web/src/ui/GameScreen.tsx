@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { findEdge, type Hint } from '@bridgle/core';
 import { t, techniqueKey } from '../i18n.ts';
 import { cycleEdge, hint, reset, statuses, undo, type Session } from '../game/session.ts';
+import { isSoundOn, setSoundOn, sfx, SOUND_EVENT } from '../game/sound.ts';
 import type { BoardView, ViewModel } from '../game/view.ts';
 import { BoardCanvas } from './BoardCanvas.tsx';
 import { formatTime, useTimer } from './hooks.ts';
@@ -31,6 +32,10 @@ export function GameScreen({ title, session, placeholder, initialMs, onChange, o
   const viewRef = useRef<BoardView | null>(null);
   const [hintView, setHintView] = useState(NO_HINT);
   const [message, setMessage] = useState('');
+  /** Screen reader announcements (visually hidden). */
+  const [announce, setAnnounce] = useState('');
+  const [celebrating, setCelebrating] = useState(false);
+  const [soundOn, setSound] = useState(isSoundOn);
   const timer = useTimer(!!session && !session.solved, initialMs, session?.puzzle);
   // Input can arrive faster than Preact re-renders; always build on the newest session.
   const latest = useRef(session);
@@ -39,7 +44,14 @@ export function GameScreen({ title, session, placeholder, initialMs, onChange, o
   useEffect(() => {
     setHintView(NO_HINT);
     setMessage('');
+    setCelebrating(false);
   }, [session?.puzzle]);
+
+  useEffect(() => {
+    const sync = () => setSound(isSoundOn());
+    window.addEventListener(SOUND_EVENT, sync);
+    return () => window.removeEventListener(SOUND_EVENT, sync);
+  }, []);
 
   // Store progress on every change and when the tab goes away.
   useEffect(() => {
@@ -55,11 +67,29 @@ export function GameScreen({ title, session, placeholder, initialMs, onChange, o
     };
   }, [session]);
 
-  const change = (next: Session) => {
-    if (next === latest.current) return;
+  const change = (next: Session, changedEdge = -1) => {
+    const prev = latest.current;
+    if (next === prev || !prev) return;
     latest.current = next;
     setHintView(NO_HINT);
+    playChangeSound(prev.counts, next.counts);
+    if (changedEdge >= 0) setAnnounce(describeBridge(next, changedEdge));
+    if (next.solved && !prev.solved) {
+      // Hold back result dialogs until the short celebration is over (or skipped).
+      setCelebrating(true);
+      sfx.win();
+      setAnnounce(t('a11y.solved'));
+      const view = viewRef.current;
+      void (view ? view.playWin() : Promise.resolve()).then(() => setCelebrating(false));
+    }
     onChange(next, timer.read());
+  };
+
+  const onFocusIsland = (island: number, selected: boolean) => {
+    const s = latest.current;
+    if (!s) return;
+    if (selected) sfx.select();
+    setAnnounce(describeIsland(s, island) + (selected ? t('a11y.selected') : ''));
   };
 
   const onCycle = (edge: number) => {
@@ -68,11 +98,12 @@ export function GameScreen({ title, session, placeholder, initialMs, onChange, o
     const result = cycleEdge(current, edge);
     if (result.blocked) {
       viewRef.current?.flash(result.by);
+      sfx.blocked();
       setMessage(t('game.blocked'));
       return;
     }
     setMessage('');
-    change(result.session);
+    change(result.session, edge);
   };
 
   const onHint = () => {
@@ -83,6 +114,7 @@ export function GameScreen({ title, session, placeholder, initialMs, onChange, o
     onChange(next, timer.read());
     setHintView(hintHighlights(current, h));
     setMessage(hintText(h));
+    sfx.hint();
   };
 
   const model: ViewModel | null = useMemo(
@@ -113,10 +145,22 @@ export function GameScreen({ title, session, placeholder, initialMs, onChange, o
         <span class="timer" role="timer" aria-label={t('win.time')}>
           {formatTime(timer.elapsed)}
         </span>
+        <button
+          class="btn icon"
+          onClick={() => setSoundOn(!soundOn)}
+          aria-pressed={!soundOn}
+          aria-label={soundOn ? t('game.mute') : t('game.unmute')}
+          title={soundOn ? t('game.mute') : t('game.unmute')}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 9h4l5-4v14l-5-4H4z" />
+            {soundOn ? <path d="M16.5 8.5a5 5 0 010 7M19 6a8.5 8.5 0 010 12" /> : <path d="M17 9l5 6M22 9l-5 6" />}
+          </svg>
+        </button>
       </header>
 
       {model ? (
-        <BoardCanvas model={model} onCycle={onCycle} viewRef={viewRef} />
+        <BoardCanvas model={model} onCycle={onCycle} onFocus={onFocusIsland} viewRef={viewRef} />
       ) : (
         <div class="board-frame placeholder">
           <p>{placeholder}</p>
@@ -126,6 +170,10 @@ export function GameScreen({ title, session, placeholder, initialMs, onChange, o
       <p class="status" role="status" aria-live="polite">
         {message}
       </p>
+      <p class="sr-only" aria-live="polite">
+        {announce}
+      </p>
+      {celebrating && <p class="skip-hint">{t('win.skip')}</p>}
 
       <nav class="toolbar">
         <button class="btn" onClick={() => latest.current && change(undo(latest.current))} disabled={!playing || session!.history.length === 0}>
@@ -152,9 +200,38 @@ export function GameScreen({ title, session, placeholder, initialMs, onChange, o
         {extraActions}
       </nav>
 
-      {children}
+      {!celebrating && children}
     </main>
   );
+}
+
+function playChangeSound(before: ArrayLike<number>, after: ArrayLike<number>): void {
+  let up = false;
+  let down = false;
+  for (let i = 0; i < after.length; i++) {
+    if ((after[i] as number) > (before[i] as number)) up = true;
+    else if ((after[i] as number) < (before[i] as number)) down = true;
+  }
+  if (up) sfx.build();
+  else if (down) sfx.splash();
+}
+
+function describeIsland(s: Session, island: number): string {
+  const isl = s.puzzle.islands[island]!;
+  let have = 0;
+  for (const e of s.board.edgesOf[island]!) have += s.counts[e] as number;
+  return t('a11y.island', { n: isl.n, row: isl.y + 1, col: isl.x + 1, have });
+}
+
+function describeBridge(s: Session, edge: number): string {
+  const e = s.board.edges[edge]!;
+  const a = s.puzzle.islands[e.a]!;
+  const b = s.puzzle.islands[e.b]!;
+  return t('a11y.bridge', {
+    count: s.counts[edge] as number,
+    a: t('a11y.islandShort', { n: a.n, row: a.y + 1, col: a.x + 1 }),
+    b: t('a11y.islandShort', { n: b.n, row: b.y + 1, col: b.x + 1 }),
+  });
 }
 
 function hintHighlights(s: Session, h: Hint) {

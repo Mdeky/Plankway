@@ -1,9 +1,11 @@
 import { render } from 'preact';
 import { App } from './app.tsx';
 import { syncResults } from './game/sync.ts';
+import { applyTheme } from './game/theme.ts';
 import { getLang, setLang } from './i18n.ts';
 import './styles.css';
 
+applyTheme();
 setLang(getLang());
 render(<App />, document.getElementById('app')!);
 

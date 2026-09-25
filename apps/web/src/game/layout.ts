@@ -18,9 +18,12 @@ export interface Layout {
 
 export const MIN_HIT_RADIUS = 22;
 
+/** Extra room around the grid (in cells) so decorations on edge islands aren't clipped. */
+const MARGIN = 0.2;
+
 export function computeLayout(board: Board, width: number, height: number): Layout {
-  const cell = Math.min(width / board.width, height / board.height);
-  const radius = cell * 0.38;
+  const cell = Math.min(width / (board.width + MARGIN * 2), height / (board.height + MARGIN * 2));
+  const radius = cell * 0.42;
   return {
     width,
     height,

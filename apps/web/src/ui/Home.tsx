@@ -13,9 +13,10 @@ interface Props {
   onDaily(): void;
   onEndless(): void;
   onHowTo(): void;
+  onSettings(): void;
 }
 
-export function Home({ onDaily, onEndless, onHowTo }: Props) {
+export function Home({ onDaily, onEndless, onHowTo, onSettings }: Props) {
   const progress = loadEndlessProgress();
   const [number, setNumber] = useState(todayNumber);
   const [daily, setDaily] = useState<DailyState>('new');
@@ -62,6 +63,9 @@ export function Home({ onDaily, onEndless, onHowTo }: Props) {
           </button>
           <button class="btn" onClick={() => setShowProfile(true)}>
             {t('menu.profile')}
+          </button>
+          <button class="btn" onClick={onSettings}>
+            {t('menu.settings')}
           </button>
         </div>
       </div>
