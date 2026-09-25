@@ -79,3 +79,19 @@ export async function idbPut<T extends object>(store: StoreName, value: T, key: 
     // Kept in memory for this visit.
   }
 }
+
+export async function idbClear(store: StoreName): Promise<void> {
+  mem(store).clear();
+  const db = await open();
+  if (!db) return;
+  try {
+    const tx = db.transaction(store, 'readwrite');
+    tx.objectStore(store).clear();
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch {
+    // nothing stored
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "@bridgle/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --local --port 8787",
+    "db:migrate:local": "wrangler d1 migrations apply bridgle --local",
+    "db:migrate:remote": "wrangler d1 migrations apply bridgle --remote",
+    "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@bridgle/core": "workspace:*",
+    "hono": "^4.9.9"
+  },
+  "devDependencies": {
+    "wrangler": "^4.40.2"
+  }
+}

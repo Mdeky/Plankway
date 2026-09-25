@@ -5,3 +5,4 @@ coverage/
 .dev.vars
 *.log
 .DS_Store
+scripts/out/

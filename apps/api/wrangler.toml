@@ -1,0 +1,15 @@
+name = "bridgle-api"
+main = "src/index.ts"
+compatibility_date = "2025-09-01"
+
+# Production: route /api/* on the site domain to this Worker (set up at launch, milestone 7).
+
+[[d1_databases]]
+binding = "DB"
+database_name = "bridgle"
+# Replace with the real id from `wrangler d1 create bridgle` before deploying.
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+# Secrets (never in this file): `wrangler secret put HASH_PEPPER`.
+# Local development reads them from .dev.vars (see .dev.vars.example).

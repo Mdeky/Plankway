@@ -4,6 +4,7 @@ import { loadDailyRecord, loadDailyStats, todayNumber } from '../game/daily-stor
 import type { DailyStats } from '../game/stats.ts';
 import { loadEndlessProgress } from '../game/storage.ts';
 import { Dialog } from './Dialog.tsx';
+import { ProfileDialog } from './ProfileDialog.tsx';
 import { Countdown, StatsPanel } from './StatsPanel.tsx';
 
 type DailyState = 'new' | 'playing' | 'solved';
@@ -20,6 +21,8 @@ export function Home({ onDaily, onEndless, onHowTo }: Props) {
   const [daily, setDaily] = useState<DailyState>('new');
   const [stats, setStats] = useState<DailyStats | null>(null);
   const [showStats, setShowStats] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [refresh, setRefresh] = useState(0);
 
   useEffect(() => {
     let live = true;
@@ -28,7 +31,7 @@ export function Home({ onDaily, onEndless, onHowTo }: Props) {
     return () => {
       live = false;
     };
-  }, [number]);
+  }, [number, refresh]);
 
   return (
     <main class="screen home">
@@ -57,6 +60,9 @@ export function Home({ onDaily, onEndless, onHowTo }: Props) {
           <button class="btn" onClick={onHowTo}>
             {t('menu.howto')}
           </button>
+          <button class="btn" onClick={() => setShowProfile(true)}>
+            {t('menu.profile')}
+          </button>
         </div>
       </div>
 
@@ -71,6 +77,7 @@ export function Home({ onDaily, onEndless, onHowTo }: Props) {
           </div>
         </Dialog>
       )}
+      {showProfile && <ProfileDialog onClose={() => setShowProfile(false)} onDataChanged={() => setRefresh((r) => r + 1)} />}
     </main>
   );
 }

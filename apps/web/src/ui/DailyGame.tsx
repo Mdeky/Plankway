@@ -1,15 +1,41 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { bridgesToCounts, dateForNumber, formatDate } from '@bridgle/core';
+import {
+  bridgesToCounts,
+  buildBoard,
+  countsToSolution,
+  dateForNumber,
+  findSolutions,
+  formatDate,
+  serializeSolution,
+  stateToSolution,
+} from '@bridgle/core';
+import { fetchDaily } from '../game/api.ts';
 import { t } from '../i18n.ts';
 import { loadDailyRecord, loadDailyStats, saveDailyRecord, todayNumber } from '../game/daily-store.ts';
-import { GeneratorClient } from '../game/generator-client.ts';
+import { GeneratorClient, type GeneratedGame } from '../game/generator-client.ts';
 import { createSession, type Session } from '../game/session.ts';
 import { shareResult, shareText, type ShareOutcome } from '../game/share.ts';
+import { syncResults } from '../game/sync.ts';
 import type { DailyRecord, DailyStats } from '../game/stats.ts';
 import { Dialog } from './Dialog.tsx';
 import { GameScreen } from './GameScreen.tsx';
 import { Countdown, StatsPanel } from './StatsPanel.tsx';
 import { formatTime } from './format.ts';
+
+/**
+ * The server's puzzle is canonical; without a connection (or before it's published) the
+ * same puzzle is generated locally from its seed. The client never receives a solution,
+ * so it solves the puzzle itself for hints.
+ */
+async function loadPuzzle(client: GeneratorClient, number: number): Promise<GeneratedGame> {
+  const remote = await fetchDaily(formatDate(dateForNumber(number)));
+  if (remote && remote.number === number) {
+    const board = buildBoard(remote.puzzle);
+    const [solved] = findSolutions(board, 1);
+    if (solved) return { puzzle: remote.puzzle, solution: stateToSolution(board, solved) };
+  }
+  return client.daily(number);
+}
 
 interface Loaded {
   session: Session;
@@ -37,7 +63,7 @@ export function DailyGame({ onExit }: { onExit(): void }) {
     setShowResult(false);
     (async () => {
       try {
-        const [generated, saved] = await Promise.all([client.daily(number), loadDailyRecord(number)]);
+        const [generated, saved] = await Promise.all([loadPuzzle(client, number), loadDailyRecord(number)]);
         if (cancelled) return;
         record.current = saved ?? null;
         let session = createSession(generated.puzzle, generated.solution);
@@ -88,9 +114,12 @@ export function DailyGame({ onExit }: { onExit(): void }) {
       undos: next.undos,
       hints: next.hints,
       progress: undefined,
+      bridges: serializeSolution(countsToSolution(next.board, next.counts)),
+      synced: false,
     };
     record.current = solved;
     void saveDailyRecord(solved).then(async () => {
+      void syncResults();
       setResult({ record: solved, stats: await loadDailyStats(number) });
       setShowResult(true);
     });

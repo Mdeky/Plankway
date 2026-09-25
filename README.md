@@ -8,8 +8,9 @@ Connect all islands with bridges; a bridge can never cross a reef.
 ```
 packages/core/   pure TypeScript: model, rules, solvers, generator, seeded RNG (no DOM)
 apps/web/        Vite + Preact + canvas renderer
-apps/api/        Cloudflare Worker (Hono) + D1            (milestone 4)
-scripts/         CLI for daily puzzle generation          (milestone 4)
+apps/api/        Cloudflare Worker (Hono) + D1 migrations
+scripts/         CLI: generate daily puzzles and write them to D1
+.github/         CI (tests) and the daily generation cron
 ```
 
 ## Local development
@@ -21,9 +22,19 @@ pnpm install
 pnpm test        # all unit tests
 pnpm typecheck   # strict TypeScript
 pnpm bench       # generator timing per difficulty (optional: pnpm bench -- 50)
-pnpm --filter @bridgle/web dev     # play locally on http://localhost:5173
-pnpm --filter @bridgle/web build   # production build in apps/web/dist
 ```
+
+Full stack (no Cloudflare account needed, everything runs locally):
+
+```bash
+cp apps/api/.dev.vars.example apps/api/.dev.vars   # once: local secret
+pnpm db:setup:local    # once: D1 migrations + the next 14 days of puzzles
+pnpm dev:api           # Worker on http://localhost:8787 (wrangler, local D1)
+pnpm dev:web           # app on http://localhost:5173, /api is proxied to the Worker
+```
+
+The web app also works without the API: it then generates the daily locally and syncs
+results once the API is reachable.
 
 ## Core (`packages/core`)
 
@@ -116,3 +127,37 @@ bridgle.com
 ```
 
 The URL in the share text comes from `VITE_SITE_URL` (default `bridgle.com`).
+
+## API (`apps/api`)
+
+Cloudflare Worker with Hono, data in D1 (`migrations/`). All routes live under `/api`; in
+production the Worker is routed on the same domain as the site, so no CORS is needed.
+
+| Route | What it does |
+|---|---|
+| `GET /api/daily/:date` | Puzzle for an ISO date. Only dates that have started somewhere on earth (≤ today at UTC+14). Never includes the solution. |
+| `POST /api/profile` | Creates an anonymous profile. Token in an `HttpOnly; Secure; SameSite=Lax` cookie, returns the id and a 4-word recovery code. |
+| `POST /api/daily/:number/result` | `{ timeMs, undos, hints, solution }`. The server checks the solution against the rules; the first accepted result stands. Returns stats. |
+| `GET /api/profile/stats?today=n` | Stats, streaks and results. `today` is the client's local puzzle number, clamped to what is possible right now. |
+| `POST /api/profile/recover` | `{ code }` links this device to an existing profile (new token for this device). |
+| `POST /api/profile/recovery-code` | Replaces a lost recovery code; the old one stops working. |
+| `DELETE /api/profile` | Deletes the profile and all its results (GDPR). |
+
+- Tokens, recovery codes and IPs are only stored as HMAC-SHA256 with the `HASH_PEPPER` secret.
+- Rate limits per hour: profile creation 10/IP, recovery 10/IP, results 60/profile.
+- Tests run the real app against SQLite (`node:sqlite`) with the same migrations.
+
+### Daily puzzles
+
+`node scripts/generate-daily.ts --apply local|remote` fills D1 up to 14 days ahead (idempotent).
+`.github/workflows/daily.yml` runs it every night; if a run fails, the buffer covers it.
+Without `--apply` it only writes SQL to `scripts/out/`.
+
+### Deploying (not done yet — needs a Cloudflare account)
+
+1. `pnpm --filter @bridgle/api exec wrangler login`
+2. `pnpm --filter @bridgle/api exec wrangler d1 create bridgle` → put the id in `apps/api/wrangler.toml`
+3. `pnpm --filter @bridgle/api db:migrate:remote`
+4. `pnpm --filter @bridgle/api exec wrangler secret put HASH_PEPPER` (long random value)
+5. `pnpm --filter @bridgle/api deploy`
+6. GitHub secrets `CLOUDFLARE_API_TOKEN` (D1 edit rights) and `CLOUDFLARE_ACCOUNT_ID` for the cron.

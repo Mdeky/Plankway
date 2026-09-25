@@ -448,3 +448,66 @@ h2 {
   max-height: 92dvh;
   overflow-y: auto;
 }
+
+/* ── Profile ──────────────────────────────────────── */
+
+.menu-row {
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+}
+
+.profile-section {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.profile-section h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.profile-section p {
+  margin: 0;
+}
+
+.recovery-code {
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--bg);
+  font-family: ui-monospace, 'Cascadia Mono', Menlo, monospace;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  user-select: all;
+}
+
+.field {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.field input {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 2px solid var(--btn-border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-family: ui-monospace, 'Cascadia Mono', Menlo, monospace;
+}
+
+.field input:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.btn.danger {
+  background: var(--mistake);
+  border-color: var(--mistake);
+  color: #fff;
+}
