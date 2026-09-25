@@ -153,14 +153,18 @@ production the Worker is routed on the same domain as the site, so no CORS is ne
 `.github/workflows/daily.yml` runs it every night; if a run fails, the buffer covers it.
 Without `--apply` it only writes SQL to `scripts/out/`.
 
-### Deploying (not done yet — needs a Cloudflare account)
+### Hosting & deploying
 
-1. `pnpm --filter @bridgle/api exec wrangler login`
-2. `pnpm --filter @bridgle/api exec wrangler d1 create plankway` → put the id in `apps/api/wrangler.toml`
-3. `pnpm --filter @bridgle/api db:migrate:remote`
-4. `pnpm --filter @bridgle/api exec wrangler secret put HASH_PEPPER` (long random value)
-5. `pnpm --filter @bridgle/api deploy`
-6. GitHub secrets `CLOUDFLARE_API_TOKEN` (D1 edit rights) and `CLOUDFLARE_ACCOUNT_ID` for the cron.
+One Cloudflare Worker, `plankway`, serves both the site (static assets from `apps/web/dist`, SPA
+fallback) and the API (only `/api/*` runs Worker code). Same origin, so the profile cookie just works;
+static asset requests are free and don't count towards the Workers request quota.
+
+- D1 database `plankway` in Western Europe (`apps/api/wrangler.toml`); secret `HASH_PEPPER` set with
+  `wrangler secret put HASH_PEPPER` (never in git).
+- Deploy site + API: `pnpm run deploy` (builds the web app, then `wrangler deploy`).
+- Daily puzzles: `node scripts/generate-daily.ts --apply remote` — also run nightly by GitHub Actions,
+  which needs the repository secrets `CLOUDFLARE_API_TOKEN` (D1 edit) and `CLOUDFLARE_ACCOUNT_ID`.
+- `apps/web/public/_headers`: long cache for hashed assets, no cache for `sw.js`, basic security headers.
 
 ## Look & feel (`apps/web/src/game`)
 

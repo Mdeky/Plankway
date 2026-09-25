@@ -27,7 +27,7 @@ function serviceWorker(): Plugin {
     closeBundle() {
       const files = walk(outDir)
         .map((f) => relative(outDir, f).split(sep).join('/'))
-        .filter((f) => f !== 'sw.js' && f !== 'robots.txt' && !f.endsWith('.map'))
+        .filter((f) => f !== 'sw.js' && f !== 'robots.txt' && f !== '_headers' && !f.endsWith('.map'))
         .sort();
       const template = readFileSync(resolve(outDir, '..', 'sw', 'sw.js'), 'utf8');
       const hash = createHash('sha256').update(template);

@@ -1,8 +1,15 @@
-name = "plankway-api"
+# One Worker serves both the site (static assets from apps/web/dist) and the API.
+# Same origin: the profile cookie works, and no separate /api route is needed.
+name = "plankway"
 main = "src/index.ts"
 compatibility_date = "2025-09-01"
 
-# Production: route /api/* on the site domain to this Worker (set up at launch, milestone 7).
+[assets]
+directory = "../web/dist"
+# Unknown paths (/daily, /privacy, …) get index.html; the app routes them.
+not_found_handling = "single-page-application"
+# Only API calls run the Worker code; everything else is a free static asset request.
+run_worker_first = ["/api/*"]
 
 [[d1_databases]]
 binding = "DB"

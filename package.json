@@ -17,7 +17,8 @@
     "build:web": "pnpm --filter @bridgle/web build",
     "check:bundle": "pnpm build:web && node scripts/check-bundle.ts",
     "icons": "node scripts/make-icons.ts",
-    "check:launch": "node scripts/check-launch.ts"
+    "check:launch": "node scripts/check-launch.ts",
+    "deploy": "pnpm --filter @bridgle/api deploy"
   },
   "devDependencies": {
     "typescript": "^5.9.3",
