@@ -176,3 +176,24 @@ Without `--apply` it only writes SQL to `scripts/out/`.
 - `prefers-reduced-motion`: no waves, no pulsing, no plank/splash animation, no win scene.
 - Status is never colour-only: a flag on complete islands, a "!" badge and red ring when over.
 - Screen readers get announcements for focus, selection, every bridge change and the win.
+
+## PWA & performance
+
+- **Installable:** `public/manifest.webmanifest` with icons in `public/icons/`. The icons are drawn
+  by `node scripts/make-icons.ts` (geometry + Node's zlib, no image assets).
+- **Offline:** `apps/web/sw/sw.js` is turned into `dist/sw.js` by the `bridgle-sw` plugin in
+  `vite.config.ts`, which injects every built file (app, CSS, generator worker, icons) and a
+  content hash as cache version.
+  - Static files: cache first. Pages: network first, cached app shell offline.
+  - `/api/daily/*`: network first with a cached copy; other `/api` calls are never cached.
+  - Endless is generated in the (precached) worker, the daily falls back to local generation,
+    results sync when back online — the whole game works without a connection.
+- **Updates:** a new version waits until the player taps "Reload" in the banner; it never
+  reloads mid-puzzle. The service worker only registers in production builds.
+- **Budget:** `pnpm check:bundle` builds the app and fails above 100 KB gzip of initial JS
+  (currently ~30 KB). It runs in CI.
+- **Lighthouse (mobile, production preview):** 100 performance, 100 accessibility,
+  100 best practices, 100 SEO. LCP ≈ 1.5 s, TBT ≤ 10 ms, CLS 0.
+
+Local production check: `pnpm build:web && pnpm --filter @bridgle/web preview` (http://localhost:4173,
+`/api` is proxied to `pnpm dev:api`).

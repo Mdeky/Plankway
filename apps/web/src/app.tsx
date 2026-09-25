@@ -5,6 +5,7 @@ import { EndlessGame } from './ui/EndlessGame.tsx';
 import { Home } from './ui/Home.tsx';
 import { HowTo } from './ui/HowTo.tsx';
 import { SettingsDialog } from './ui/SettingsDialog.tsx';
+import { UpdateBanner } from './ui/UpdateBanner.tsx';
 
 type Screen = 'home' | 'daily' | 'endless';
 
@@ -33,6 +34,7 @@ export function App() {
       {screen === 'daily' && <DailyGame onExit={home} />}
       {screen === 'endless' && <EndlessGame onExit={home} />}
       {howTo && <HowTo onClose={() => setHowTo(false)} />}
+      <UpdateBanner />
       {settings && <SettingsDialog onClose={() => setSettings(false)} onLangChange={changeLang} />}
     </div>
   );

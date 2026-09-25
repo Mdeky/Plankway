@@ -286,7 +286,6 @@ h2 {
 .btn.big small {
   font-size: 0.8rem;
   font-weight: 500;
-  opacity: 0.9;
 }
 
 .btn.icon {
@@ -694,4 +693,27 @@ h2 {
 
 .btn.primary {
   box-shadow: 0 3px 0 rgb(0 0 0 / 0.18);
+}
+
+/* ── PWA ──────────────────────────────────────────── */
+
+.update-banner {
+  position: fixed;
+  left: 50%;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(calc(100% - 32px), 480px);
+  padding: 10px 10px 10px 16px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.25);
+  transform: translateX(-50%);
+}
+
+.update-banner span {
+  flex: 1;
 }

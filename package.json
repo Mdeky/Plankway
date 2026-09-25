@@ -13,7 +13,10 @@
     "dev:web": "pnpm --filter @bridgle/web dev",
     "dev:api": "pnpm --filter @bridgle/api dev",
     "db:setup:local": "pnpm --filter @bridgle/api db:migrate:local && node scripts/generate-daily.ts --apply local",
-    "daily:generate": "node scripts/generate-daily.ts"
+    "daily:generate": "node scripts/generate-daily.ts",
+    "build:web": "pnpm --filter @bridgle/web build",
+    "check:bundle": "pnpm build:web && node scripts/check-bundle.ts",
+    "icons": "node scripts/make-icons.ts"
   },
   "devDependencies": {
     "typescript": "^5.9.3",
