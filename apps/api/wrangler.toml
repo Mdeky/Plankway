@@ -7,8 +7,8 @@ compatibility_date = "2025-09-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "plankway"
-# Replace with the real id from `wrangler d1 create plankway` before deploying.
-database_id = "00000000-0000-0000-0000-000000000000"
+# Created with `wrangler d1 create plankway --location weur` (Western Europe).
+database_id = "db8799e1-717f-49c4-ab3d-9d69ec640f8b"
 migrations_dir = "migrations"
 
 # Secrets (never in this file): `wrangler secret put HASH_PEPPER`.
