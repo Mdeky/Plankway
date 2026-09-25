@@ -11,3 +11,4 @@ export * from './rules/index.ts';
 export * from './solver/techniques.ts';
 export * from './solver/logical.ts';
 export * from './solver/backtrack.ts';
+export * from './daily.ts';

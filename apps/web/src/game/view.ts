@@ -190,7 +190,16 @@ export class BoardView {
     return edgeInDirection(board, source, dir);
   }
 
+  /** Re-measures if the canvas changed size without a ResizeObserver callback (e.g. hidden tab). */
+  private ensureLayout(): void {
+    const rect = this.canvas.getBoundingClientRect();
+    if (!this.layout || Math.abs(rect.width - this.layout.width) > 0.5 || Math.abs(rect.height - this.layout.height) > 0.5) {
+      this.resize();
+    }
+  }
+
   private onPointerDown = (ev: PointerEvent): void => {
+    if (this.model) this.ensureLayout();
     if (!this.model || !this.layout || this.model.locked || this.pointer) return;
     if (ev.pointerType === 'mouse' && ev.button !== 0) return;
     const p = this.point(ev);
@@ -198,7 +207,11 @@ export class BoardView {
     const bridge = island < 0 ? bridgeAt(this.model.board, this.layout, this.model.counts, p) : -1;
     this.pointer = { id: ev.pointerId, start: p, island, bridge, moved: false };
     this.showFocus = false;
-    this.canvas.setPointerCapture(ev.pointerId);
+    try {
+      this.canvas.setPointerCapture(ev.pointerId);
+    } catch {
+      // The pointer is already gone (or synthetic); dragging still works without capture.
+    }
     ev.preventDefault();
   };
 
@@ -266,6 +279,7 @@ export class BoardView {
   }
 
   private onKeyDown = (ev: KeyboardEvent): void => {
+    if (this.model) this.ensureLayout();
     const model = this.model;
     if (!model || model.locked) return;
     const dir = KEY_DIRECTIONS[ev.key];

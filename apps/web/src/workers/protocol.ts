@@ -1,8 +1,6 @@
-export interface GenerateRequest {
-  id: number;
-  level: number;
-  seed: string;
-}
+export type GenerateJob = { kind: 'endless'; level: number; seed: string } | { kind: 'daily'; number: number };
+
+export type GenerateRequest = GenerateJob & { id: number };
 
 export type GenerateResponse =
   | { id: number; ok: true; puzzle: string; solution: number[]; ms: number }

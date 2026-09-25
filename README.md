@@ -95,3 +95,24 @@ A mid-range phone is roughly 3–5× slower, which keeps endless well under the 
 Controls: drag from island to island (or just drag in a direction), tap an island and then a
 neighbour, or tap a bridge. Keyboard: arrows move between islands, space selects, an arrow then
 builds in that direction, Esc cancels.
+
+## Daily mode
+
+- **Numbering:** Bridgle #1 = 2026-09-25 (`LAUNCH_DATE` in `packages/core/src/daily.ts`). The number
+  follows the player's *local* calendar date, like a newspaper.
+- **Difficulty:** by weekday, Monday easiest → Sunday hardest (`DAILY_PRESETS`).
+- **Same puzzle for everyone:** `generateDaily(n)` uses seed `bridgle-daily-<n>`. Until the API exists
+  (milestone 4) the browser generates it locally in the worker; the server script will make the same call.
+- **Hints are allowed** and are mentioned in the shared result.
+- **Stats** live in IndexedDB (`bridgle` → `daily`, one record per puzzle number) and include the game in
+  progress. Played = started, streak = consecutive puzzle numbers solved; today's unsolved puzzle
+  doesn't break the streak until the day is over.
+- **Share text** (no spoilers): five islands, and hints and undos wash some away.
+
+```
+Bridgle #42 🌉 2:31
+🏝️🏝️🏝️🏝️🏝️ 0 undos
+bridgle.com
+```
+
+The URL in the share text comes from `VITE_SITE_URL` (default `bridgle.com`).

@@ -32,12 +32,16 @@ export function BoardCanvas({ model, onCycle, viewRef }: Props) {
   }, [model]);
 
   return (
-    <div class="board-frame" style={{ aspectRatio: aspect(model.board) }}>
+    <div class="board-frame" style={frameStyle(model.board)}>
       <canvas ref={canvasRef} class="board" tabIndex={0} role="application" aria-label={t('game.board')} />
     </div>
   );
 }
 
-function aspect(board: Board): string {
-  return `${board.width} / ${board.height}`;
+/** Keeps the frame at the puzzle's aspect ratio, also when max-height kicks in. */
+function frameStyle(board: Board) {
+  return {
+    aspectRatio: `${board.width} / ${board.height}`,
+    width: `min(100%, calc(70dvh * ${board.width} / ${board.height}))`,
+  };
 }

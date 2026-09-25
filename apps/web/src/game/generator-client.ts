@@ -1,13 +1,16 @@
 import { parsePuzzle, parseSolution, type Puzzle, type Solution } from '@bridgle/core';
-import type { GenerateRequest, GenerateResponse } from '../workers/protocol.ts';
+import type { GenerateJob, GenerateRequest, GenerateResponse } from '../workers/protocol.ts';
 
-export interface EndlessPuzzle {
-  level: number;
+export interface GeneratedGame {
   puzzle: Puzzle;
   solution: Solution;
 }
 
-/** Generates endless puzzles off the main thread so the UI never stutters. */
+export interface EndlessPuzzle extends GeneratedGame {
+  level: number;
+}
+
+/** Generates puzzles off the main thread so the UI never stutters. */
 export class GeneratorClient {
   private worker: Worker | null = null;
   private nextId = 1;
@@ -25,14 +28,23 @@ export class GeneratorClient {
     return this.worker;
   }
 
-  async generate(level: number, seed: string): Promise<EndlessPuzzle> {
-    const request: GenerateRequest = { id: this.nextId++, level, seed };
+  private async run(job: GenerateJob): Promise<GeneratedGame> {
+    const id = this.nextId++;
     const response = await new Promise<GenerateResponse>((resolve) => {
-      this.pending.set(request.id, resolve);
+      this.pending.set(id, resolve);
+      const request: GenerateRequest = { ...job, id };
       this.getWorker().postMessage(request);
     });
     if (!response.ok) throw new Error(response.error);
-    return { level, puzzle: parsePuzzle(response.puzzle), solution: parseSolution(response.solution) };
+    return { puzzle: parsePuzzle(response.puzzle), solution: parseSolution(response.solution) };
+  }
+
+  async generate(level: number, seed: string): Promise<EndlessPuzzle> {
+    return { level, ...(await this.run({ kind: 'endless', level, seed })) };
+  }
+
+  daily(number: number): Promise<GeneratedGame> {
+    return this.run({ kind: 'daily', number });
   }
 
   dispose(): void {

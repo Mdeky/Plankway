@@ -348,3 +348,103 @@ h2 {
     animation: none !important;
   }
 }
+
+/* ── Daily & stats ────────────────────────────────── */
+
+.menu-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.stats.four {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.stats.four dd {
+  margin: 0;
+}
+
+.stats.four dt {
+  margin-top: 2px;
+  line-height: 1.2;
+}
+
+.stats-panel h3 {
+  margin: 16px 0 8px;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.histogram {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.histogram li {
+  display: grid;
+  grid-template-columns: 5.5em 1fr;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+.hist-label {
+  color: var(--muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.hist-bar {
+  min-width: 1.6em;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--water-deep);
+  color: #fff;
+  font-weight: 700;
+  text-align: right;
+}
+
+.share-preview {
+  margin: 16px 0 0;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--bg);
+  font: inherit;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  text-align: center;
+  user-select: text;
+}
+
+.dialog hr {
+  margin: 8px 0 4px;
+  border: 0;
+  border-top: 1px solid var(--btn-border);
+}
+
+.dialog .status {
+  min-height: 1.4em;
+  margin-top: 8px;
+}
+
+.countdown {
+  margin: 16px 0 0;
+  color: var(--muted);
+  text-align: center;
+}
+
+.countdown strong {
+  color: var(--text);
+  font-size: 1.2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.dialog {
+  max-height: 92dvh;
+  overflow-y: auto;
+}

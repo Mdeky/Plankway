@@ -1,8 +1,35 @@
+import { useEffect, useState } from 'preact/hooks';
 import { t } from '../i18n.ts';
+import { loadDailyRecord, loadDailyStats, todayNumber } from '../game/daily-store.ts';
+import type { DailyStats } from '../game/stats.ts';
 import { loadEndlessProgress } from '../game/storage.ts';
+import { Dialog } from './Dialog.tsx';
+import { Countdown, StatsPanel } from './StatsPanel.tsx';
 
-export function Home({ onEndless, onHowTo }: { onEndless(): void; onHowTo(): void }) {
+type DailyState = 'new' | 'playing' | 'solved';
+
+interface Props {
+  onDaily(): void;
+  onEndless(): void;
+  onHowTo(): void;
+}
+
+export function Home({ onDaily, onEndless, onHowTo }: Props) {
   const progress = loadEndlessProgress();
+  const [number, setNumber] = useState(todayNumber);
+  const [daily, setDaily] = useState<DailyState>('new');
+  const [stats, setStats] = useState<DailyStats | null>(null);
+  const [showStats, setShowStats] = useState(false);
+
+  useEffect(() => {
+    let live = true;
+    void loadDailyRecord(number).then((r) => live && setDaily(r?.solved ? 'solved' : r ? 'playing' : 'new'));
+    void loadDailyStats(number).then((s) => live && setStats(s));
+    return () => {
+      live = false;
+    };
+  }, [number]);
+
   return (
     <main class="screen home">
       <div class="logo" aria-hidden="true">
@@ -15,14 +42,35 @@ export function Home({ onEndless, onHowTo }: { onEndless(): void; onHowTo(): voi
       <h1 class="title">{t('app.title')}</h1>
       <p class="tagline">{t('app.tagline')}</p>
       <div class="menu">
-        <button class="btn primary big" onClick={onEndless}>
+        <button class="btn primary big" onClick={onDaily}>
+          <span>{t('menu.daily', { number })}</span>
+          <small>{t(`menu.daily.${daily}`, { streak: stats?.currentStreak ?? 0 })}</small>
+        </button>
+        <button class="btn big" onClick={onEndless}>
           <span>{t('menu.endless')}</span>
           <small>{t('menu.endless.sub', { level: progress.level, best: progress.best })}</small>
         </button>
-        <button class="btn big" onClick={onHowTo}>
-          {t('menu.howto')}
-        </button>
+        <div class="menu-row">
+          <button class="btn" onClick={() => setShowStats(true)}>
+            {t('stats.title')}
+          </button>
+          <button class="btn" onClick={onHowTo}>
+            {t('menu.howto')}
+          </button>
+        </div>
       </div>
+
+      {showStats && stats && (
+        <Dialog title={t('stats.title')} onClose={() => setShowStats(false)}>
+          <StatsPanel stats={stats} />
+          <Countdown onNewDay={() => setNumber(todayNumber())} />
+          <div class="dialog-actions">
+            <button class="btn primary" autofocus onClick={() => setShowStats(false)}>
+              {t('common.close')}
+            </button>
+          </div>
+        </Dialog>
+      )}
     </main>
   );
 }
