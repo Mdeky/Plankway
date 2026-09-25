@@ -30,6 +30,22 @@ if (apply !== undefined && apply !== 'local' && apply !== 'remote') {
   process.exit(1);
 }
 
+// Catch the most common CI mistake early: a secret pasted with extra text or line breaks.
+if (apply === 'remote' && process.env.CLOUDFLARE_API_TOKEN !== undefined) {
+  const token = process.env.CLOUDFLARE_API_TOKEN;
+  if (/\s/.test(token) || token.length < 30) {
+    console.error(
+      'CLOUDFLARE_API_TOKEN looks wrong: it must be the bare token on one line (no spaces, line breaks, ' +
+        '"Bearer" or curl command). Edit the secret in GitHub → Settings → Secrets and variables → Actions.',
+    );
+    process.exit(1);
+  }
+  if (process.env.CLOUDFLARE_ACCOUNT_ID !== undefined && !/^[0-9a-f]{32}$/.test(process.env.CLOUDFLARE_ACCOUNT_ID.trim())) {
+    console.error('CLOUDFLARE_ACCOUNT_ID looks wrong: expected the 32-character account id.');
+    process.exit(1);
+  }
+}
+
 function wrangler(args: string[]): string {
   // One command string: pnpm is a .cmd shim on Windows and needs a shell. Only our own
   // fixed arguments go in here, never outside input.
