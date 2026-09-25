@@ -4,10 +4,10 @@
  * any value still contains "[".
  */
 export const LEGAL = {
-  controller: '[naam of bedrijfsnaam]',
-  address: '[straat en nummer, postcode, gemeente, land]',
-  email: '[e-mailadres voor privacyvragen]',
-  companyNumber: '[ondernemingsnummer, indien van toepassing]',
+  controller: 'Mathieu De Keyser',
+  address: 'Duffelsesteenweg 55, 2550 Kontich, Antwerpen, België',
+  email: 'info@dekeyserwebdesign.com',
+  companyNumber: 'BE 1040.500.093',
   /** ISO date of the last change to the policies. */
   lastUpdated: '2026-09-25',
 };
