@@ -4,6 +4,12 @@ name = "plankway"
 main = "src/index.ts"
 compatibility_date = "2025-09-01"
 
+# Custom domains: Cloudflare creates the DNS records and the certificate.
+routes = [
+  { pattern = "plankway.com", custom_domain = true },
+  { pattern = "www.plankway.com", custom_domain = true },
+]
+
 [assets]
 directory = "../web/dist"
 # Unknown paths (/daily, /privacy, …) get index.html; the app routes them.
