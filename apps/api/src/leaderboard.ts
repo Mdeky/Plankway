@@ -5,6 +5,8 @@
  * - daily:   fastest verified time without hints, per daily puzzle
  * - level:   fastest verified time without hints, per endless level
  * - run:     furthest endless level, counted as the unbroken run from level 1 (hints allowed)
+ *
+ * Each board covers the whole world, one country, or a player and their friends.
  */
 import type { D1Database } from './db.ts';
 
@@ -52,20 +54,31 @@ export async function updateRun(db: D1Database, profileId: string): Promise<void
     .run();
 }
 
-const countryFilter = (country: string | null) => (country ? 'AND p.country = ?' : '');
+export type Scope = { country: string } | { friendsOf: string } | null;
+
+/** Extra WHERE clause (on profiles `p`) and its values for a scope. */
+function scopeFilter(scope: Scope): [string, unknown[]] {
+  if (!scope) return ['', []];
+  if ('country' in scope) return ['AND p.country = ?', [scope.country]];
+  return ['AND (p.id = ? OR p.id IN (SELECT friend_id FROM friendships WHERE profile_id = ?))', [scope.friendsOf, scope.friendsOf]];
+}
+
+/** A player outside the chosen country simply isn't part of that board. */
+const outsideScope = (scope: Scope, country: string | null) => !!scope && 'country' in scope && scope.country !== country;
 
 /** Fastest times: `source` is results (daily) or endless_results (per level). */
 export async function timeBoard(
   db: D1Database,
   kind: 'daily' | 'level',
   id: number,
-  country: string | null,
+  scope: Scope,
   profileId: string | null,
 ): Promise<Board> {
   const table = kind === 'daily' ? 'results' : 'endless_results';
   const key = kind === 'daily' ? 'puzzle_number' : 'level';
-  const where = `r.${key} = ? AND r.verified = 1 AND r.hints = 0 AND p.display_name IS NOT NULL ${countryFilter(country)}`;
-  const args = country ? [id, country] : [id];
+  const [filter, filterArgs] = scopeFilter(scope);
+  const where = `r.${key} = ? AND r.verified = 1 AND r.hints = 0 AND p.display_name IS NOT NULL ${filter}`;
+  const args = [id, ...filterArgs];
 
   const { results } = await db
     .prepare(
@@ -92,7 +105,7 @@ export async function timeBoard(
   if (own.value === null) return { entries, you: { rank: null, reason: 'not-played' } };
   if (own.hints) return { entries, you: { rank: null, reason: 'hints' } };
   if (!own.verified) return { entries, you: { rank: null, reason: 'unverified' } };
-  if (country && own.country !== country) return { entries, you: null };
+  if (outsideScope(scope, own.country)) return { entries, you: null };
 
   const ahead = await db
     .prepare(
@@ -104,9 +117,9 @@ export async function timeBoard(
   return { entries, you: { rank: (ahead?.n ?? 0) + 1, value: own.value } };
 }
 
-export async function runBoard(db: D1Database, country: string | null, profileId: string | null): Promise<Board> {
-  const where = `p.display_name IS NOT NULL AND p.endless_run > 0 ${countryFilter(country)}`;
-  const args = country ? [country] : [];
+export async function runBoard(db: D1Database, scope: Scope, profileId: string | null): Promise<Board> {
+  const [filter, args] = scopeFilter(scope);
+  const where = `p.display_name IS NOT NULL AND p.endless_run > 0 ${filter}`;
   const { results } = await db
     .prepare(
       `SELECT p.id AS id, p.display_name AS name, p.country AS country, p.endless_run AS value, p.endless_run_at AS at
@@ -123,7 +136,7 @@ export async function runBoard(db: D1Database, country: string | null, profileId
     .first<{ name: string | null; country: string | null; value: number; at: number | null }>();
   if (!own?.name) return { entries, you: { rank: null, reason: 'no-name' } };
   if (own.value === 0) return { entries, you: { rank: null, reason: 'not-played' } };
-  if (country && own.country !== country) return { entries, you: null };
+  if (outsideScope(scope, own.country)) return { entries, you: null };
 
   const ahead = await db
     .prepare(

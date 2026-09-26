@@ -3,6 +3,7 @@ import { COUNTRIES, NAME_MAX, normalizeDisplayName } from '@bridgle/core';
 import { fetchMe, fetchProviders, signInUrl, updateAccount, type Account } from '../game/api.ts';
 import { signOutDevice } from '../game/sync.ts';
 import { getLang, t, type MessageKey } from '../i18n.ts';
+import { FriendsSection } from './FriendsSection.tsx';
 
 type State = { kind: 'loading' } | { kind: 'offline' } | { kind: 'guest'; providers: string[] } | { kind: 'account'; account: Account };
 
@@ -24,6 +25,8 @@ export function AccountSection({ onSignedOut, notice }: { onSignedOut(): void; n
         setState({ kind: 'account', account: me.account });
         setName(me.account.displayName ?? '');
         setCountry(me.account.country ?? '');
+        // Already able to accept an invite: the friends section handles it and says so.
+        if (me.account.displayName && notice === 'friends.invited') setMessage(null);
       } else if (providers.length > 0) {
         setState({ kind: 'guest', providers });
       } else {
@@ -96,46 +99,50 @@ export function AccountSection({ onSignedOut, notice }: { onSignedOut(): void; n
   };
 
   return (
-    <form class="profile-section" onSubmit={save}>
-      <h3>{t('account.title')}</h3>
-      <p class="muted">{t('account.signedIn')}</p>
-      <label class="field">
-        <span>{t('account.name')}</span>
-        <input
-          value={name}
-          maxLength={NAME_MAX}
-          onInput={(e) => setName((e.target as HTMLInputElement).value)}
-          autocomplete="nickname"
-          spellcheck={false}
-        />
-        <small class="muted">{t('account.nameHelp')}</small>
-      </label>
-      <label class="field">
-        <span>{t('account.country')}</span>
-        <select value={country} onChange={(e) => setCountry((e.target as HTMLSelectElement).value)}>
-          <option value="">{t('account.noCountry')}</option>
-          {countries.map((c) => (
-            <option key={c.code} value={c.code}>
-              {c.label}
-            </option>
-          ))}
-        </select>
-      </label>
-      <div class="dialog-actions">
-        <button class="btn" type="button" onClick={leave} disabled={busy}>
-          {t('account.signOut')}
-        </button>
-        <button class="btn primary" type="submit" disabled={busy || !changed}>
-          {t('account.save')}
-        </button>
-      </div>
-      <p class="muted">{t('account.signOutHelp')}</p>
-      {message && (
-        <p class="status" role="status">
-          {t(message)}
-        </p>
-      )}
-    </form>
+    <>
+      <form class="profile-section" onSubmit={save}>
+        <h3>{t('account.title')}</h3>
+        <p class="muted">{t('account.signedIn')}</p>
+        <label class="field">
+          <span>{t('account.name')}</span>
+          <input
+            value={name}
+            maxLength={NAME_MAX}
+            onInput={(e) => setName((e.target as HTMLInputElement).value)}
+            autocomplete="nickname"
+            spellcheck={false}
+          />
+          <small class="muted">{t('account.nameHelp')}</small>
+        </label>
+        <label class="field">
+          <span>{t('account.country')}</span>
+          <select value={country} onChange={(e) => setCountry((e.target as HTMLSelectElement).value)}>
+            <option value="">{t('account.noCountry')}</option>
+            {countries.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div class="dialog-actions">
+          <button class="btn" type="button" onClick={leave} disabled={busy}>
+            {t('account.signOut')}
+          </button>
+          <button class="btn primary" type="submit" disabled={busy || !changed}>
+            {t('account.save')}
+          </button>
+        </div>
+        <p class="muted">{t('account.signOutHelp')}</p>
+        {message && (
+          <p class="status" role="status">
+            {t(message)}
+          </p>
+        )}
+      </form>
+      {/* Friends need a name, so both sides know who they're adding. */}
+      {state.account.displayName && <FriendsSection />}
+    </>
   );
 }
 

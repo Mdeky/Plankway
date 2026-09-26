@@ -178,17 +178,82 @@ export interface Board {
 
 export type BoardKind = { kind: 'daily'; number: number } | { kind: 'level'; level: number } | { kind: 'run' };
 
-/** A leaderboard, or null when offline. `country` narrows it to one country. */
-export async function fetchBoard(board: BoardKind, country: string | null): Promise<Board | null> {
+/** Whole world (null), one country, or the player and their friends. */
+export type BoardScope = { country: string } | { friends: true } | null;
+
+/** A leaderboard, or null when offline. */
+export async function fetchBoard(board: BoardKind, scope: BoardScope): Promise<Board | null> {
   const path =
     board.kind === 'daily'
       ? `/leaderboard/daily/${board.number}`
       : board.kind === 'level'
         ? `/leaderboard/endless/level/${board.level}`
         : '/leaderboard/endless/run';
-  const { status, data } = await request('GET', country ? `${path}?country=${encodeURIComponent(country)}` : path);
+  const query = !scope ? '' : 'country' in scope ? `?country=${encodeURIComponent(scope.country)}` : '?friends=1';
+  const { status, data } = await request('GET', path + query);
   if (status !== 200 || !data || !Array.isArray(data.entries)) return null;
   return data as unknown as Board;
+}
+
+// ── Friends ─────────────────────────────────────────────────────────────────
+
+export interface Friend {
+  key: string;
+  name: string;
+  country: string | null;
+  since: number;
+}
+
+export interface FriendsView {
+  code: string;
+  friends: Friend[];
+  max: number;
+}
+
+export type FriendsReply = { ok: true; view: FriendsView; added?: { name: string }; already?: boolean } | { ok: false; error: string };
+
+async function friendsCall(method: string, path: string, body?: unknown): Promise<FriendsReply> {
+  const { status, data } = await request(method, path, body);
+  if (status === 200 && data && typeof data.code === 'string') {
+    return {
+      ok: true,
+      view: { code: data.code, friends: (data.friends as Friend[]) ?? [], max: Number(data.max) || 0 },
+      added: data.added as { name: string } | undefined,
+      already: data.already === true,
+    };
+  }
+  return { ok: false, error: typeof data?.error === 'string' ? data.error : 'offline' };
+}
+
+export const fetchFriends = () => friendsCall('GET', '/friends');
+export const addFriend = (code: string) => friendsCall('POST', '/friends', { code });
+export const removeFriend = (key: string) => friendsCall('DELETE', `/friends/${encodeURIComponent(key)}`);
+export const renewFriendCode = () => friendsCall('POST', '/friends/code');
+
+/** "K7M2QX9P" → "K7M2-QX9P" */
+export const formatFriendCode = (code: string) => `${code.slice(0, 4)}-${code.slice(4)}`;
+
+/** Invite link that adds you as a friend when opened. */
+export const inviteLink = (code: string) => `${location.origin}/?friend=${code}`;
+
+const PENDING_FRIEND_KEY = 'bridgle.pendingFriend';
+
+/** A friend code from an invite link, kept until the player can use it (after signing in). */
+export function pendingFriendCode(): string | null {
+  try {
+    return sessionStorage.getItem(PENDING_FRIEND_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setPendingFriendCode(code: string | null): void {
+  try {
+    if (code) sessionStorage.setItem(PENDING_FRIEND_KEY, code);
+    else sessionStorage.removeItem(PENDING_FRIEND_KEY);
+  } catch {
+    // ignore
+  }
 }
 
 // ── Accounts ────────────────────────────────────────────────────────────────

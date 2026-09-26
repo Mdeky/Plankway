@@ -670,6 +670,8 @@ h2 {
 
 .profile-section {
   display: grid;
+  /* One column that never grows past the dialog (long country names in the select). */
+  grid-template-columns: minmax(0, 1fr);
   justify-items: start;
   gap: 8px;
   margin-top: 16px;
@@ -715,6 +717,8 @@ h2 {
 }
 
 .field select {
+  min-width: 0;
+  max-width: 100%;
   min-height: 44px;
   padding: 8px 12px;
   border: 2px solid var(--btn-border);
@@ -980,6 +984,58 @@ a.btn {
 .board-you {
   margin: 4px 0 0;
   text-align: center;
+}
+
+/* ── Friends ──────────────────────────────────────── */
+
+.friend-code {
+  justify-self: center;
+  padding: 8px 16px;
+  border-radius: 10px;
+  background: var(--bg);
+  font-family: ui-monospace, 'Cascadia Mono', Menlo, monospace;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.friends-confirm {
+  justify-self: stretch;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--bg);
+}
+
+.friends-add {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px;
+  justify-self: stretch;
+}
+
+.friends-list {
+  display: grid;
+  gap: 4px;
+  justify-self: stretch;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.friends-add input {
+  min-width: 0;
+}
+
+.friends-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 44px;
+  text-align: left;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 4px 2px 12px;
+  border-radius: 12px;
+  background: var(--bg);
 }
 
 /* ── Pages, footer, ads ───────────────────────────── */

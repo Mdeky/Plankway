@@ -186,6 +186,15 @@ place (or why they're not on it: `no-name`, `not-played`, `hints`, `unverified`)
   level 1 (hints allowed). Kept in `profiles.endless_run` whenever endless results are added or
   merged; ties go to whoever got there first.
 
+### Friends (`apps/api/src/friends.ts`)
+
+Needs an account with a name. Every player gets a friend code (8 characters without 0/O/1/I,
+shown as `K7M2-QX9P`); entering it, or opening the invite link `/?friend=CODE`, makes both players
+friends right away. Friends see nothing beyond the public boards: every leaderboard takes
+`?friends=1` for "me and my friends". Either side can remove the friendship (`DELETE
+/api/friends/:key`, an opaque per-viewer key), and `POST /api/friends/code` replaces the code so
+the old one stops working. At most 200 friends; adding and renewing are rate-limited.
+
 ### Daily puzzles and endless levels
 
 `node scripts/generate-daily.ts --apply local|remote` fills D1 up to 14 days ahead (idempotent).

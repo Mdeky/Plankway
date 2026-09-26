@@ -16,7 +16,8 @@ import {
   type Solution,
 } from '@bridgle/core';
 import type { Env } from './db.ts';
-import { runBoard, timeBoard, updateRun } from './leaderboard.ts';
+import { addFriend, friendCode, listFriends, MAX_FRIENDS, normalizeFriendCode, removeFriend, resetFriendCode } from './friends.ts';
+import { runBoard, timeBoard, updateRun, type Scope } from './leaderboard.ts';
 import { isNameAllowed } from './names.ts';
 import { authorizeUrl, configuredProviders, exchangeCode, OAuthError, pkceChallenge, type Provider } from './oauth.ts';
 import { keyedHash, newRecoveryCode, newToken, normalizeRecoveryCode, signStart, verifyStart, type PlayMode } from './security.ts';
@@ -36,6 +37,7 @@ export const RATE_LIMITS = {
   start: 300,
   signIn: 30,
   account: 30,
+  friends: 30,
 } as const;
 
 const MAX_TIME_MS = 7 * 24 * 3600 * 1000;
@@ -155,11 +157,13 @@ export function createApp(options: AppOptions = {}) {
     c.env.DB.prepare('DELETE FROM endless_results WHERE profile_id = ?').bind(profileId),
     c.env.DB.prepare('DELETE FROM sessions WHERE profile_id = ?').bind(profileId),
     c.env.DB.prepare('DELETE FROM identities WHERE profile_id = ?').bind(profileId),
-    c.env.DB.prepare('DELETE FROM rate_limits WHERE key IN (?, ?, ?, ?)').bind(
+    c.env.DB.prepare('DELETE FROM friendships WHERE profile_id = ? OR friend_id = ?').bind(profileId, profileId),
+    c.env.DB.prepare('DELETE FROM rate_limits WHERE key IN (?, ?, ?, ?, ?)').bind(
       `submitResult:${profileId}`,
       `submitEndless:${profileId}`,
       `start:${profileId}`,
       `account:${profileId}`,
+      `friends:${profileId}`,
     ),
     c.env.DB.prepare('DELETE FROM profiles WHERE id = ?').bind(profileId),
   ];
@@ -395,25 +399,88 @@ export function createApp(options: AppOptions = {}) {
 
   // ── Leaderboards ──────────────────────────────────────────────────────────
 
-  /** `?country=BE` narrows a board to one country; anything else means the whole world. */
-  const boardCountry = (c: Context<AppEnv>): string | null => {
+  /**
+   * `?country=BE` narrows a board to one country, `?friends=1` to the player and their
+   * friends; without either it covers the whole world.
+   */
+  const boardScope = (c: Context<AppEnv>, profileId: string | null): Scope => {
+    if (c.req.query('friends') === '1') {
+      if (!profileId) fail(401, 'no-profile');
+      return { friendsOf: profileId };
+    }
     const country = c.req.query('country');
     if (country === undefined || country === '') return null;
     if (!isCountry(country)) fail(400, 'invalid-country');
-    return country;
+    return { country };
   };
 
   app.get('/leaderboard/daily/:number', async (c) => {
     const number = Number(c.req.param('number'));
     if (!Number.isInteger(number) || number < 1 || number > latestNumber()) fail(404, 'not-available');
-    return c.json({ number, ...(await timeBoard(c.env.DB, 'daily', number, boardCountry(c), await findProfile(c))) });
+    const profileId = await findProfile(c);
+    return c.json({ number, ...(await timeBoard(c.env.DB, 'daily', number, boardScope(c, profileId), profileId)) });
   });
 
-  app.get('/leaderboard/endless/run', async (c) => c.json(await runBoard(c.env.DB, boardCountry(c), await findProfile(c))));
+  app.get('/leaderboard/endless/run', async (c) => {
+    const profileId = await findProfile(c);
+    return c.json(await runBoard(c.env.DB, boardScope(c, profileId), profileId));
+  });
 
   app.get('/leaderboard/endless/level/:level', async (c) => {
     const level = readLevel(c);
-    return c.json({ level, ...(await timeBoard(c.env.DB, 'level', level, boardCountry(c), await findProfile(c))) });
+    const profileId = await findProfile(c);
+    return c.json({ level, ...(await timeBoard(c.env.DB, 'level', level, boardScope(c, profileId), profileId)) });
+  });
+
+  // ── Friends ───────────────────────────────────────────────────────────────
+
+  /** Friends need an account and a name, so both sides know who they're adding. */
+  const requireNamedAccount = async (c: Context<AppEnv>): Promise<string> => {
+    const profileId = await requireProfile(c);
+    if (!(await hasAccount(c, profileId))) fail(403, 'account-required');
+    const row = await c.env.DB.prepare('SELECT display_name FROM profiles WHERE id = ?').bind(profileId).first<{ display_name: string | null }>();
+    if (!row?.display_name) fail(403, 'name-required');
+    return profileId;
+  };
+
+  /** Per viewer and friend, so keys can't be compared across friend lists. */
+  const friendKey = (c: Context<AppEnv>, profileId: string) => (friendId: string) =>
+    keyedHash(pepper(c), 'friend', `${profileId}:${friendId}`).then((h) => h.slice(0, 24));
+
+  const friendsView = async (c: Context<AppEnv>, profileId: string) => ({
+    code: await friendCode(c.env.DB, profileId),
+    friends: await listFriends(c.env.DB, profileId, friendKey(c, profileId)),
+    max: MAX_FRIENDS,
+  });
+
+  app.get('/friends', async (c) => {
+    const profileId = await requireNamedAccount(c);
+    return c.json(await friendsView(c, profileId));
+  });
+
+  app.post('/friends', async (c) => {
+    const profileId = await requireNamedAccount(c);
+    await rateLimit(c, 'friends', profileId);
+    const body = await readJson(c);
+    const code = normalizeFriendCode(body.code);
+    if (!code) fail(400, 'invalid-code');
+    const outcome = await addFriend(c.env.DB, profileId, code, now());
+    if (!outcome.ok) fail(outcome.error === 'unknown-code' ? 404 : 400, outcome.error);
+    return c.json({ added: outcome.friend, already: outcome.already, ...(await friendsView(c, profileId)) });
+  });
+
+  app.delete('/friends/:key', async (c) => {
+    const profileId = await requireNamedAccount(c);
+    if (!(await removeFriend(c.env.DB, profileId, c.req.param('key'), friendKey(c, profileId)))) fail(404, 'not-found');
+    return c.json(await friendsView(c, profileId));
+  });
+
+  /** A new code: the old one stops working (existing friends stay). */
+  app.post('/friends/code', async (c) => {
+    const profileId = await requireNamedAccount(c);
+    await rateLimit(c, 'friends', profileId);
+    await resetFriendCode(c.env.DB, profileId);
+    return c.json(await friendsView(c, profileId));
   });
 
   // ── Accounts ──────────────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
-import { fetchBoard, fetchMe, type Board, type BoardKind } from '../game/api.ts';
+import { fetchBoard, fetchMe, type Board, type BoardKind, type BoardScope } from '../game/api.ts';
 import { todayNumber } from '../game/daily-store.ts';
 import { loadEndlessProgress } from '../game/storage.ts';
 import { getLang, t, type MessageKey } from '../i18n.ts';
@@ -25,12 +25,16 @@ export function LeaderboardScreen() {
   const [number, setNumber] = useState(todayNumber);
   const [level, setLevel] = useState(() => Math.max(1, loadEndlessProgress().best));
   const [myCountry, setMyCountry] = useState<string | null>(null);
-  const [scope, setScope] = useState<'world' | 'country'>('world');
+  const [canFriends, setCanFriends] = useState(false);
+  const [scope, setScope] = useState<'world' | 'country' | 'friends'>('world');
   const [board, setBoard] = useState<Board | null | 'loading'>('loading');
 
   useEffect(() => {
     document.title = `${t('board.title')} · Plankway`;
-    void fetchMe().then((me) => setMyCountry(me?.account?.country ?? null));
+    void fetchMe().then((me) => {
+      setMyCountry(me?.account?.country ?? null);
+      setCanFriends(!!me?.account?.displayName);
+    });
     return () => {
       document.title = 'Plankway – daily bridges puzzle';
     };
@@ -41,11 +45,12 @@ export function LeaderboardScreen() {
     let live = true;
     setBoard('loading');
     const kind: BoardKind = tab === 'daily' ? { kind: 'daily', number } : tab === 'level' ? { kind: 'level', level } : { kind: 'run' };
-    void fetchBoard(kind, country).then((b) => live && setBoard(b));
+    const boardScope: BoardScope = scope === 'friends' ? { friends: true } : country ? { country } : null;
+    void fetchBoard(kind, boardScope).then((b) => live && setBoard(b));
     return () => {
       live = false;
     };
-  }, [tab, number, level, country]);
+  }, [tab, number, level, country, scope]);
 
   const countryName = useMemo(() => {
     if (!myCountry) return null;
@@ -92,14 +97,21 @@ export function LeaderboardScreen() {
         />
       )}
 
-      {myCountry && (
+      {(myCountry || canFriends) && (
         <div class="segmented small" role="group" aria-label={t('board.scope')}>
           <button class={scope === 'world' ? 'active' : ''} aria-pressed={scope === 'world'} onClick={() => setScope('world')}>
             {t('board.world')}
           </button>
-          <button class={scope === 'country' ? 'active' : ''} aria-pressed={scope === 'country'} onClick={() => setScope('country')}>
-            {countryName}
-          </button>
+          {myCountry && (
+            <button class={scope === 'country' ? 'active' : ''} aria-pressed={scope === 'country'} onClick={() => setScope('country')}>
+              {countryName}
+            </button>
+          )}
+          {canFriends && (
+            <button class={scope === 'friends' ? 'active' : ''} aria-pressed={scope === 'friends'} onClick={() => setScope('friends')}>
+              {t('board.friends')}
+            </button>
+          )}
         </div>
       )}
 
@@ -112,7 +124,7 @@ export function LeaderboardScreen() {
       ) : (
         <>
           {board.entries.length === 0 ? (
-            <p class="muted board-empty">{t('board.empty')}</p>
+            <p class="muted board-empty">{t(scope === 'friends' ? 'board.emptyFriends' : 'board.empty')}</p>
           ) : (
             <ol class="board">
               {board.entries.map((e) => (

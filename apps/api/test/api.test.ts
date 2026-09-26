@@ -4,6 +4,7 @@ import migration from '../migrations/0001_init.sql?raw';
 import migration2 from '../migrations/0002_endless_and_verified_times.sql?raw';
 import migration3 from '../migrations/0003_accounts_and_sessions.sql?raw';
 import migration4 from '../migrations/0004_leaderboards.sql?raw';
+import migration5 from '../migrations/0005_friends.sql?raw';
 import { COOKIE_NAME, createApp, OAUTH_COOKIE, RATE_LIMITS } from '../src/app.ts';
 import type { Env } from '../src/db.ts';
 import { normalizeRecoveryCode } from '../src/security.ts';
@@ -19,7 +20,7 @@ let app: ReturnType<typeof createApp>;
 let clock = NOW;
 
 beforeEach(() => {
-  env = { DB: createTestDb([migration, migration2, migration3, migration4]), HASH_PEPPER: 'test-pepper' };
+  env = { DB: createTestDb([migration, migration2, migration3, migration4, migration5]), HASH_PEPPER: 'test-pepper' };
   for (const [n, g] of puzzles) {
     env.DB.raw
       .prepare('INSERT INTO puzzles (number, date, data, difficulty) VALUES (?, ?, ?, ?)')
@@ -706,6 +707,106 @@ describe('leaderboards', () => {
     }
     db.raw.exec(migration4);
     expect(db.raw.prepare('SELECT endless_run, endless_run_at FROM profiles').get()).toEqual({ endless_run: 3, endless_run_at: 30 });
+  });
+});
+
+describe('friends', () => {
+  let n = 0;
+  const named = async (name: string, country: string | null = null) => {
+    withGoogle();
+    google.sub = `friend-${name}-${++n}`;
+    const c = client(`198.19.0.${n}`);
+    await signIn(c);
+    await c.call('PUT', '/api/profile/account', { displayName: name, country });
+    return c;
+  };
+
+  it('needs an account with a name', async () => {
+    const anon = client('198.19.1.1');
+    expect((await anon.call('GET', '/api/friends')).status).toBe(401);
+    await anon.call('POST', '/api/profile');
+    expect((await anon.call('GET', '/api/friends')).json).toEqual({ error: 'account-required' });
+    withGoogle();
+    google.sub = 'nameless';
+    const nameless = client('198.19.1.2');
+    await signIn(nameless);
+    expect((await nameless.call('GET', '/api/friends')).json).toEqual({ error: 'name-required' });
+  });
+
+  it('adding a code makes both players friends right away; codes are forgiving to type', async () => {
+    const anna = await named('Anna', 'BE');
+    const bram = await named('Bram', 'NL');
+    const annaCode = (await anna.call('GET', '/api/friends')).json.code as string;
+    expect(annaCode).toMatch(/^[A-HJ-NP-Z2-9]{8}$/);
+    expect((await anna.call('GET', '/api/friends')).json.code).toBe(annaCode); // stable
+
+    const typed = `${annaCode.slice(0, 4).toLowerCase()}-${annaCode.slice(4)}`;
+    const added = await bram.call('POST', '/api/friends', { code: typed });
+    expect(added.json.added).toEqual({ name: 'Anna', country: 'BE' });
+    expect(added.json.already).toBe(false);
+    expect(added.json.friends.map((f: { name: string }) => f.name)).toEqual(['Anna']);
+    expect((await anna.call('GET', '/api/friends')).json.friends.map((f: { name: string }) => f.name)).toEqual(['Bram']);
+    expect((await bram.call('POST', '/api/friends', { code: annaCode })).json.already).toBe(true);
+    // Friends are identified by an opaque key, never a profile id.
+    expect(JSON.stringify(added.json)).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-/);
+  });
+
+  it('rejects bad, unknown and own codes', async () => {
+    const anna = await named('Anna');
+    const own = (await anna.call('GET', '/api/friends')).json.code;
+    expect((await anna.call('POST', '/api/friends', { code: 'nope' })).json).toEqual({ error: 'invalid-code' });
+    expect((await anna.call('POST', '/api/friends', { code: 'AAAAAAAA' })).json).toEqual({ error: 'unknown-code' });
+    expect((await anna.call('POST', '/api/friends', { code: own })).json).toEqual({ error: 'self' });
+  });
+
+  it('either side can remove the friendship', async () => {
+    const anna = await named('Anna');
+    const bram = await named('Bram');
+    await bram.call('POST', '/api/friends', { code: (await anna.call('GET', '/api/friends')).json.code });
+    const key = (await anna.call('GET', '/api/friends')).json.friends[0].key as string;
+    expect((await bram.call('DELETE', `/api/friends/${key}`)).status).toBe(404); // Anna's key for Bram isn't Bram's for Anna
+    const after = await anna.call('DELETE', `/api/friends/${key}`);
+    expect(after.json.friends).toEqual([]);
+    expect((await bram.call('GET', '/api/friends')).json.friends).toEqual([]);
+  });
+
+  it('a new code stops the old one from working; existing friends stay', async () => {
+    const anna = await named('Anna');
+    const bram = await named('Bram');
+    const cas = await named('Cas');
+    const old = (await anna.call('GET', '/api/friends')).json.code;
+    await bram.call('POST', '/api/friends', { code: old });
+    const fresh = (await anna.call('POST', '/api/friends/code')).json;
+    expect(fresh.code).not.toBe(old);
+    expect(fresh.friends).toHaveLength(1);
+    expect((await cas.call('POST', '/api/friends', { code: old })).json).toEqual({ error: 'unknown-code' });
+    expect((await cas.call('POST', '/api/friends', { code: fresh.code })).status).toBe(200);
+  });
+
+  it('the friends leaderboard shows the player and their friends only', async () => {
+    const anna = await named('Anna');
+    const bram = await named('Bram');
+    const stranger = await named('Stranger');
+    await bram.call('POST', '/api/friends', { code: (await anna.call('GET', '/api/friends')).json.code });
+    for (const [c, time] of [[anna, 60_000], [bram, 40_000], [stranger, 20_000]] as const) {
+      const token = (await c.call('POST', '/api/daily/2/start')).json.token;
+      clock += time + 1_000;
+      await c.call('POST', '/api/daily/2/result', result(2, { timeMs: time, startToken: token }));
+    }
+    const board = (await anna.call('GET', '/api/leaderboard/daily/2?friends=1')).json;
+    expect(board.entries.map((e: { name: string }) => e.name)).toEqual(['Bram', 'Anna']);
+    expect(board.you).toEqual({ rank: 2, value: 60_000 });
+    expect((await anna.call('GET', '/api/leaderboard/daily/2')).json.entries).toHaveLength(3);
+    expect((await client('198.19.9.9').call('GET', '/api/leaderboard/daily/2?friends=1')).status).toBe(401);
+  });
+
+  it('deleting a profile ends its friendships', async () => {
+    const anna = await named('Anna');
+    const bram = await named('Bram');
+    await bram.call('POST', '/api/friends', { code: (await anna.call('GET', '/api/friends')).json.code });
+    await anna.call('DELETE', '/api/profile');
+    expect(count('friendships')).toBe(0);
+    expect((await bram.call('GET', '/api/friends')).json.friends).toEqual([]);
   });
 });
 
