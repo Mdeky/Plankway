@@ -59,10 +59,9 @@ export function FriendsSection() {
 
   if (!view) {
     return message ? (
-      <section class="profile-section">
-        <h3>{t('friends.title')}</h3>
-        <p class="status">{t(message.key)}</p>
-      </section>
+      <p class="status" role="status">
+        {t(message.key)}
+      </p>
     ) : null;
   }
 
@@ -82,7 +81,6 @@ export function FriendsSection() {
 
   return (
     <section class="profile-section">
-      <h3>{t('friends.title')}</h3>
       <p class="muted">{t('friends.intro')}</p>
       <p class="friend-code" translate={false} aria-label={t('friends.yourCode')}>
         {formatFriendCode(view.code)}

@@ -986,6 +986,266 @@ a.btn {
   text-align: center;
 }
 
+/* ── Profile dialog ───────────────────────────────── */
+
+.icon {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.profile-dialog {
+  text-align: left;
+}
+
+.profile-view {
+  display: grid;
+  gap: 14px;
+  animation: view-in 0.22s ease both;
+}
+
+.profile-view.back {
+  animation-name: view-back;
+}
+
+@keyframes view-in {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+}
+
+@keyframes view-back {
+  from {
+    opacity: 0;
+    transform: translateX(-18px);
+  }
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--btn-border);
+}
+
+.profile-avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--water), var(--water-deep));
+  box-shadow:
+    0 0 0 3px var(--surface),
+    0 0 0 5px var(--accent);
+  color: #fff;
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+
+.profile-avatar .icon {
+  width: 28px;
+  height: 28px;
+}
+
+.profile-who {
+  min-width: 0;
+}
+
+.profile-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.profile-check {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #2f80ed;
+  color: #fff;
+}
+
+.profile-check .icon {
+  width: 13px;
+  height: 13px;
+  stroke-width: 3.2;
+}
+
+.profile-sub {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.profile-note {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+/* The call to action borrows the home screen's sea. */
+.profile-callout {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+  padding: 16px;
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, rgb(8 52 96 / 0.9), rgb(8 72 120 / 0.55)),
+    url('./assets/background-desktop.webp') center 70% / cover;
+  color: #fff;
+}
+
+.callout-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.callout-text {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.btn.callout-btn {
+  margin-top: 6px;
+  border-color: transparent;
+  background: #fff;
+  color: #16354a;
+}
+
+.theme-switch button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+
+.theme-switch .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.profile-menu {
+  display: grid;
+  gap: 2px;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    padding 0.15s;
+}
+
+.menu-item:hover,
+.menu-item:focus-visible {
+  padding-left: 16px;
+  background: var(--bg);
+}
+
+.menu-item .icon {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  color: var(--muted);
+}
+
+.menu-label {
+  flex: 1;
+}
+
+.menu-detail {
+  max-width: 40%;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu-item .menu-chevron {
+  width: 18px;
+  height: 18px;
+}
+
+.menu-item.danger,
+.menu-item.danger .icon {
+  color: var(--mistake);
+}
+
+.profile-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid var(--btn-border);
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.profile-footer a {
+  color: var(--muted);
+}
+
+.profile-subheader {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+}
+
+.profile-subheader h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  text-align: center;
+}
+
+.profile-form {
+  display: grid;
+  gap: 12px;
+}
+
+.profile-view h4 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.profile-view > p {
+  margin: 0;
+}
+
 /* ── Friends ──────────────────────────────────────── */
 
 .friend-code {
