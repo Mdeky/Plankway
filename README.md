@@ -234,6 +234,19 @@ static asset requests are free and don't count towards the Workers request quota
 - Status is never colour-only: a flag on complete islands, a "!" badge and red ring when over.
 - Screen readers get announcements for focus, selection, every bridge change and the win.
 
+## SEO
+
+- `apps/web/build/prerender.ts` writes every route as its own HTML file after the build
+  (`index.html`, `daily.html`, `how-to-play.html`, …): title and description from
+  `src/content/seo.ts`, canonical URL, Open Graph/Twitter tags with `public/og-image.jpg`, and the
+  page text, so crawlers and link previews don't need to run the app. The app clears that text and
+  renders as usual; it sets the same titles when switching screens.
+- Home carries JSON-LD (`WebSite`, `VideoGame`, `FAQPage`) and a visible "About Plankway" section
+  (`src/content/landing.ts`) aimed at "bridges puzzle", "Hashi", "Hashiwokakero", "daily puzzle".
+- `sitemap.xml` is generated at build time; `robots.txt` points to it. Unknown paths get
+  `404.html` with status 404 (`not_found_handling = "404-page"` in `wrangler.toml`), so a new app
+  route needs an entry in `prerender.ts`.
+
 ## PWA & performance
 
 - **Installable:** `public/manifest.webmanifest` with icons in `public/icons/`. The icons are cut

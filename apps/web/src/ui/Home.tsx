@@ -5,6 +5,7 @@ import type { DailyStats } from '../game/stats.ts';
 import { loadEndlessProgress } from '../game/storage.ts';
 import { Dialog } from './Dialog.tsx';
 import { Footer } from './Footer.tsx';
+import { HomeAbout } from './HomeAbout.tsx';
 import { ProfileDialog } from './ProfileDialog.tsx';
 import { Countdown, StatsPanel } from './StatsPanel.tsx';
 
@@ -91,6 +92,7 @@ export function Home({ onDaily, onEndless, onLeaderboard, onHowTo, onSettings, p
           </div>
         </Dialog>
       )}
+      <HomeAbout />
       <Footer />
       {showProfile && (
         <ProfileDialog notice={profileNotice} onClose={() => setShowProfile(false)} onDataChanged={() => setRefresh((r) => r + 1)} />

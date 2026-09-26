@@ -30,14 +30,10 @@ export function LeaderboardScreen() {
   const [board, setBoard] = useState<Board | null | 'loading'>('loading');
 
   useEffect(() => {
-    document.title = `${t('board.title')} · Plankway`;
     void fetchMe().then((me) => {
       setMyCountry(me?.account?.country ?? null);
       setCanFriends(!!me?.account?.displayName);
     });
-    return () => {
-      document.title = 'Plankway – daily bridges puzzle';
-    };
   }, []);
 
   const country = scope === 'country' ? myCountry : null;

@@ -8,7 +8,10 @@ import './styles.css';
 
 applyTheme();
 setLang(getLang());
-render(<App />, document.getElementById('app')!);
+const root = document.getElementById('app')!;
+// The pre-rendered page text (for search engines) makes way for the app.
+root.replaceChildren();
+render(<App />, root);
 
 // Anonymous profile + catch up on results solved offline.
 void syncResults();

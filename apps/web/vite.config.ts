@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
+import { prerender } from './build/prerender.ts';
 
 /** Local API: `pnpm dev:api` (wrangler on :8787). In production /api is routed on the same domain. */
 const apiProxy = { '/api': 'http://127.0.0.1:8787' };
@@ -27,7 +28,8 @@ function serviceWorker(): Plugin {
     closeBundle() {
       const files = walk(outDir)
         .map((f) => relative(outDir, f).split(sep).join('/'))
-        .filter((f) => f !== 'sw.js' && f !== 'robots.txt' && f !== '_headers' && !f.endsWith('.map'))
+        // Crawler-only files are not needed offline.
+        .filter((f) => !['sw.js', 'robots.txt', '_headers', 'sitemap.xml', 'og-image.jpg', '404.html'].includes(f) && !f.endsWith('.map'))
         .sort();
       const template = readFileSync(resolve(outDir, '..', 'sw', 'sw.js'), 'utf8');
       const hash = createHash('sha256').update(template);
@@ -43,7 +45,7 @@ function serviceWorker(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [serviceWorker()],
+  plugins: [prerender(), serviceWorker()],
   esbuild: {
     jsx: 'automatic',
     jsxImportSource: 'preact',

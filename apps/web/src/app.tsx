@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'preact/hooks';
+import { SEO } from './content/seo.ts';
 import { setPendingFriendCode } from './game/api.ts';
 import { afterSignIn } from './game/sync.ts';
 import { markTutorialSeen, tutorialSeen } from './game/storage.ts';
@@ -19,6 +20,10 @@ export function App() {
   const [howTo, setHowTo] = useState(() => route === 'home' && !tutorialSeen() && !/[?&](login|friend)=/.test(location.search));
   const [settings, setSettings] = useState(false);
   const [profileNotice, setProfileNotice] = useState<MessageKey | null>(null);
+
+  useEffect(() => {
+    document.title = SEO[route].title;
+  }, [route]);
 
   // Back from a sign-in (?login=…): pull in the account's progress, then show the profile.
   // An invite link (?friend=CODE) opens the profile too; the friends section adds the code

@@ -262,6 +262,60 @@ h2 {
   box-shadow: 0 8px 30px rgb(0 0 0 / 0.18);
 }
 
+.home-about {
+  width: min(100%, 360px);
+  padding: 18px 20px;
+  border: 2px solid var(--btn-border);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  line-height: 1.5;
+  text-align: left;
+}
+
+.home-about h2 {
+  font-size: 1.15rem;
+}
+
+.home-about h3 {
+  margin: 16px 0 6px;
+  font-size: 1rem;
+}
+
+.home-about p {
+  margin: 8px 0 0;
+}
+
+.home-about ol,
+.home-about ul {
+  margin: 0;
+  padding-left: 1.3em;
+}
+
+.home-about li + li {
+  margin-top: 4px;
+}
+
+.home-about details {
+  border-top: 1px solid var(--btn-border);
+  padding: 8px 0;
+}
+
+.home-about summary {
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Pre-rendered HTML (build/prerender.ts): readable until the app takes over. */
+.prerender {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 16px;
+  color: var(--text);
+  line-height: 1.6;
+}
+
 .home-card {
   display: grid;
   justify-items: center;

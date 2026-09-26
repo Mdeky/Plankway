@@ -1,4 +1,3 @@
-import { useEffect } from 'preact/hooks';
 import { getLang, t } from '../i18n.ts';
 import { LEGAL } from '../content/legal.ts';
 import { page, type PageId } from '../content/pages.ts';
@@ -7,13 +6,6 @@ import { Footer } from './Footer.tsx';
 
 export function InfoPage({ id }: { id: PageId }) {
   const content = page(getLang(), id);
-
-  useEffect(() => {
-    document.title = `${content.title} · Plankway`;
-    return () => {
-      document.title = 'Plankway – daily bridges puzzle';
-    };
-  }, [id]);
 
   return (
     <main class="screen info-page">
