@@ -413,14 +413,81 @@ h2 {
   margin-top: 16px;
 }
 
-.rules {
-  margin: 0 0 12px;
-  padding-left: 1.2em;
+.tutorial {
+  touch-action: pan-y;
+}
+
+.demo-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.board-frame.demo .board {
+  cursor: default;
+  pointer-events: none;
+}
+
+.tutorial-text {
+  min-height: 12.5em;
+  text-align: center;
   line-height: 1.45;
 }
 
-.rules li + li {
-  margin-top: 6px;
+.tutorial-text h3 {
+  margin: 0 0 6px;
+}
+
+.tutorial-text p {
+  margin: 0;
+}
+
+.tutorial-text .tutorial-extra {
+  margin-top: 8px;
+  font-size: 0.85rem;
+}
+
+.tutorial-dots {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.tutorial-dots button {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.tutorial-dots button::before {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 8px;
+  margin: auto;
+  border-radius: 50%;
+  background: var(--btn-border);
+  transition: transform 0.2s;
+}
+
+.tutorial-dots button.active::before {
+  background: var(--accent);
+  transform: scale(1.35);
+}
+
+.tutorial-more {
+  margin: 12px 0 0;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.tutorial-more a {
+  color: var(--muted);
 }
 
 .muted {

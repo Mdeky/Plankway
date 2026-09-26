@@ -153,9 +153,15 @@ export class BoardView {
   }
 
   /** Briefly marks an edge, e.g. the bridge that blocked a move. */
-  flash(edge: number): void {
+  flash(edge: number, ms = FLASH_MS): void {
     this.flashEdge = edge;
-    this.flashUntil = performance.now() + FLASH_MS;
+    this.flashUntil = performance.now() + ms;
+    this.requestDraw();
+  }
+
+  /** Shows a ghost bridge, like while dragging (used by the tutorial demos). */
+  showPreview(edge: number): void {
+    this.preview = edge;
     this.requestDraw();
   }
 

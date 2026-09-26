@@ -1,4 +1,5 @@
 import { useState } from 'preact/hooks';
+import { markTutorialSeen, tutorialSeen } from './game/storage.ts';
 import { getLang, setLang, type Lang } from './i18n.ts';
 import { goBack, navigate, useRoute } from './route.ts';
 import { DailyGame } from './ui/DailyGame.tsx';
@@ -11,7 +12,8 @@ import { UpdateBanner } from './ui/UpdateBanner.tsx';
 
 export function App() {
   const route = useRoute();
-  const [howTo, setHowTo] = useState(false);
+  // New players get the tutorial once, on the home screen.
+  const [howTo, setHowTo] = useState(() => route === 'home' && !tutorialSeen());
   const [settings, setSettings] = useState(false);
   // Changing the language re-mounts the tree so every string is re-rendered.
   const [lang, setLangState] = useState<Lang>(getLang);
@@ -33,7 +35,14 @@ export function App() {
       {route === 'daily' && <DailyGame onExit={goBack} />}
       {route === 'endless' && <EndlessGame onExit={goBack} />}
       {(route === 'how-to-play' || route === 'about' || route === 'privacy' || route === 'cookies') && <LazyInfoPage id={route} />}
-      {howTo && <HowTo onClose={() => setHowTo(false)} />}
+      {howTo && (
+        <HowTo
+          onClose={() => {
+            markTutorialSeen();
+            setHowTo(false);
+          }}
+        />
+      )}
       <UpdateBanner />
       {settings && <SettingsDialog onClose={() => setSettings(false)} onLangChange={changeLang} />}
     </div>

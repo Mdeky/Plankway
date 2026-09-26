@@ -36,6 +36,17 @@ function remove(key: string): void {
   }
 }
 
+const TUTORIAL_KEY = 'bridgle.tutorial.v1';
+
+/** Whether the first-visit tutorial was already shown. */
+export function tutorialSeen(): boolean {
+  return read<boolean>(TUTORIAL_KEY) === true;
+}
+
+export function markTutorialSeen(): void {
+  write(TUTORIAL_KEY, true);
+}
+
 const ENDLESS_KEY = 'bridgle.endless.v1';
 const ENDLESS_GAME_KEY = 'bridgle.endless.game.v1';
 
