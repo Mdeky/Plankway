@@ -421,6 +421,7 @@ export type Lang = keyof typeof catalogs;
 
 const LANG_KEY = 'bridgle.lang.v1';
 
+/** English unless the player picked another language in the settings. */
 function detect(): Lang {
   try {
     const saved = localStorage.getItem(LANG_KEY);
@@ -428,13 +429,12 @@ function detect(): Lang {
   } catch {
     // ignore
   }
-  const langs = typeof navigator === 'undefined' ? [] : navigator.languages ?? [navigator.language];
-  return langs.some((l) => l?.toLowerCase().startsWith('nl')) ? 'nl' : 'en';
+  return 'en';
 }
 
 let lang: Lang = detect();
 
-/** With remember = true the choice is stored; otherwise the browser language is used. */
+/** With remember = true the choice is stored; otherwise it only applies until the next visit. */
 export function setLang(next: Lang, remember = false): void {
   lang = next;
   if (remember) {
