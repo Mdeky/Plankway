@@ -235,8 +235,9 @@ static asset requests are free and don't count towards the Workers request quota
 
 ## PWA & performance
 
-- **Installable:** `public/manifest.webmanifest` with icons in `public/icons/`. The icons are drawn
-  by `node scripts/make-icons.ts` (geometry + Node's zlib, no image assets).
+- **Installable:** `public/manifest.webmanifest` with icons in `public/icons/`. The icons are cut
+  from the logo in `assets/brand/plankway-logo.png` by `node scripts/make-icons.ts` (needs ffmpeg):
+  the round badge, a padded maskable version for Android, and a 256-colour palette to keep them small.
 - **Offline:** `apps/web/sw/sw.js` is turned into `dist/sw.js` by the `bridgle-sw` plugin in
   `vite.config.ts`, which injects every built file (app, CSS, generator worker, icons) and a
   content hash as cache version.
