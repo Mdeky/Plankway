@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 
 /** Every screen has its own URL, so the phone's back button and deep links work. */
-export type Route = 'home' | 'daily' | 'endless' | 'how-to-play' | 'about' | 'privacy' | 'cookies';
+export type Route = 'home' | 'daily' | 'endless' | 'how-to-play' | 'about' | 'privacy' | 'cookies' | 'terms';
 
 export const PATHS: Record<Route, string> = {
   home: '/',
@@ -11,6 +11,7 @@ export const PATHS: Record<Route, string> = {
   about: '/about',
   privacy: '/privacy',
   cookies: '/cookies',
+  terms: '/terms',
 };
 
 const EVENT = 'bridgle-route';

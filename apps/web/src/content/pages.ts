@@ -2,12 +2,12 @@ import type { Lang } from '../i18n.ts';
 import { LEGAL } from './legal.ts';
 
 /**
- * Long-form page content (how to play, about, privacy, cookies) in both languages.
+ * Long-form page content (how to play, about, privacy, cookies, terms) in both languages.
  * A section body is a list of paragraphs; a nested array is a bullet list.
  * The privacy and cookie texts describe what the app and API actually do — keep them in
  * sync when the data handling changes. DRAFT: have them reviewed before launch.
  */
-export type PageId = 'how-to-play' | 'about' | 'privacy' | 'cookies';
+export type PageId = 'how-to-play' | 'about' | 'privacy' | 'cookies' | 'terms';
 
 export interface Section {
   h: string;
@@ -200,6 +200,87 @@ const nl: Record<PageId, Page> = {
       },
     ],
   },
+  terms: {
+    title: 'Gebruiksvoorwaarden',
+    intro: 'Deze voorwaarden gelden voor iedereen die Plankway speelt op plankway.com of via de geïnstalleerde app. Door Plankway te gebruiken, ga je ermee akkoord.',
+    sections: [
+      {
+        h: 'Wie we zijn',
+        body: [
+          `Plankway wordt aangeboden door ${L.controller}, ${L.address}${L.companyNumber ? ` (ondernemingsnummer ${L.companyNumber})` : ''}. Contact: ${L.email}.`,
+        ],
+      },
+      {
+        h: 'Het spel',
+        body: [
+          'Plankway is gratis en wordt betaald met advertenties. Je hebt geen account nodig om te spelen.',
+          'We doen ons best om Plankway altijd beschikbaar en foutloos te houden, maar kunnen dat niet garanderen. We mogen het spel aanpassen, tijdelijk onderbreken of stopzetten, bijvoorbeeld voor onderhoud of nieuwe functies.',
+        ],
+      },
+      {
+        h: 'Je profiel en account',
+        body: [
+          [
+            'Plankway maakt automatisch een anoniem profiel aan om je resultaten en reeks bij te houden. Met je herstelcode zet je dat profiel verder op een ander toestel; bewaar die code zelf goed.',
+            'Je kan optioneel inloggen met Google. Je blijft zelf verantwoordelijk voor de toegang tot dat Google-account.',
+            'Een naam die je kiest, is zichtbaar voor andere spelers (bijvoorbeeld in klassementen). Kies geen naam die beledigend, discriminerend, misleidend of van iemand anders is.',
+            'Je kan je profiel en al je gegevens op elk moment wissen via Profiel → Mijn data wissen.',
+          ],
+        ],
+      },
+      {
+        h: 'Eerlijk spel',
+        body: [
+          'Plankway is leuk omdat iedereen dezelfde puzzels op dezelfde manier oplost. Daarom is het niet toegestaan om:',
+          [
+            'resultaten of tijden te vervalsen, of de server te misleiden over hoe of wanneer je een puzzel oploste;',
+            'bots, scripts of automatische oplossers te gebruiken om resultaten in te sturen;',
+            'de servers te overbelasten, beveiligingen te omzeilen of puzzels en gegevens massaal automatisch op te halen;',
+            'het spel of andere spelers op een andere manier te hinderen.',
+          ],
+          'Bij misbruik mogen we resultaten uit klassementen halen, een naam aanpassen of verwijderen, en in ernstige gevallen een profiel of account blokkeren of wissen.',
+        ],
+      },
+      {
+        h: 'Eigendom',
+        body: [
+          'Het spel, de puzzels, de vormgeving, de afbeeldingen en de teksten van Plankway zijn ons eigendom of worden met toestemming gebruikt. Je mag Plankway spelen voor persoonlijk, niet-commercieel gebruik.',
+          'Je resultaat delen met de deelknop mag altijd. Puzzels kopiëren om ze elders aan te bieden, of het spel namaken, mag niet zonder onze schriftelijke toestemming.',
+        ],
+      },
+      {
+        h: 'Advertenties en diensten van anderen',
+        body: [
+          'Plankway toont advertenties van Google AdSense en laat je optioneel inloggen met Google. Voor die diensten gelden ook de voorwaarden en het privacybeleid van Google. We zijn niet verantwoordelijk voor de inhoud van advertenties of van websites waar ze naartoe leiden.',
+        ],
+      },
+      {
+        h: 'Aansprakelijkheid',
+        body: [
+          'Plankway wordt aangeboden zoals het is. Voor zover de wet dat toelaat, zijn we niet aansprakelijk voor schade door het gebruik van Plankway of doordat het tijdelijk niet beschikbaar is, en ook niet voor het verlies van voortgang, reeksen of resultaten. Dit beperkt nooit je rechten als consument en geldt niet bij opzet of grove fout.',
+        ],
+      },
+      {
+        h: 'Leeftijd',
+        body: [
+          'Iedereen mag Plankway spelen. Om in te loggen met een account moet je minstens 13 jaar zijn, of toestemming hebben van een ouder of voogd.',
+        ],
+      },
+      {
+        h: 'Wijzigingen',
+        body: [
+          'We kunnen deze voorwaarden aanpassen, bijvoorbeeld wanneer we nieuwe functies toevoegen. De datum onderaan toont de laatste wijziging. Bij belangrijke wijzigingen laten we het in het spel weten.',
+        ],
+      },
+      {
+        h: 'Toepasselijk recht',
+        body: [
+          'Op deze voorwaarden is het Belgische recht van toepassing. Geschillen gaan naar de bevoegde rechtbanken van Antwerpen, tenzij de wet je als consument het recht geeft om naar de rechter van je eigen woonplaats te stappen. Neem bij een probleem eerst contact met ons op via ' + L.email + '; samen vinden we meestal snel een oplossing.',
+        ],
+      },
+    ],
+    updated: true,
+  },
 };
 
 const en: Record<PageId, Page> = {
@@ -376,6 +457,87 @@ const en: Record<PageId, Page> = {
         ],
       },
     ],
+  },
+  terms: {
+    title: 'Terms of use',
+    intro: 'These terms apply to everyone who plays Plankway on plankway.com or through the installed app. By using Plankway, you agree to them.',
+    sections: [
+      {
+        h: 'Who we are',
+        body: [
+          `Plankway is offered by ${L.controller}, ${L.address}${L.companyNumber ? ` (company number ${L.companyNumber})` : ''}. Contact: ${L.email}.`,
+        ],
+      },
+      {
+        h: 'The game',
+        body: [
+          'Plankway is free and paid for by advertising. You don’t need an account to play.',
+          'We do our best to keep Plankway available and free of errors, but we can’t guarantee it. We may change, pause or end the game, for example for maintenance or new features.',
+        ],
+      },
+      {
+        h: 'Your profile and account',
+        body: [
+          [
+            'Plankway automatically creates an anonymous profile to keep your results and streak. Your recovery code lets you continue that profile on another device; keep it safe yourself.',
+            'You can optionally sign in with Google. You remain responsible for access to that Google account.',
+            'A name you choose is visible to other players (for example on leaderboards). Don’t pick a name that is offensive, discriminatory, misleading or someone else’s.',
+            'You can delete your profile and all your data at any time via Profile → Delete my data.',
+          ],
+        ],
+      },
+      {
+        h: 'Fair play',
+        body: [
+          'Plankway is fun because everyone solves the same puzzles the same way. That’s why you may not:',
+          [
+            'fake results or times, or mislead the server about how or when you solved a puzzle;',
+            'use bots, scripts or automatic solvers to submit results;',
+            'overload the servers, get around security measures, or collect puzzles and data automatically in bulk;',
+            'disrupt the game or other players in any other way.',
+          ],
+          'In case of abuse we may remove results from leaderboards, change or remove a name, and in serious cases block or delete a profile or account.',
+        ],
+      },
+      {
+        h: 'Ownership',
+        body: [
+          'The game, the puzzles, the design, the images and the texts of Plankway are ours or used with permission. You may play Plankway for personal, non-commercial use.',
+          'Sharing your result with the share button is always fine. Copying puzzles to offer them elsewhere, or cloning the game, is not allowed without our written permission.',
+        ],
+      },
+      {
+        h: 'Ads and other services',
+        body: [
+          'Plankway shows ads from Google AdSense and lets you optionally sign in with Google. Google’s own terms and privacy policy also apply to those services. We are not responsible for the content of ads or of the websites they lead to.',
+        ],
+      },
+      {
+        h: 'Liability',
+        body: [
+          'Plankway is offered as is. As far as the law allows, we are not liable for damage caused by using Plankway or by it being temporarily unavailable, nor for lost progress, streaks or results. This never limits your rights as a consumer and does not apply in case of intent or gross negligence.',
+        ],
+      },
+      {
+        h: 'Age',
+        body: [
+          'Everyone may play Plankway. To sign in with an account you must be at least 13, or have permission from a parent or guardian.',
+        ],
+      },
+      {
+        h: 'Changes',
+        body: [
+          'We may change these terms, for example when we add new features. The date at the bottom shows the last change. We’ll let you know in the game about important changes.',
+        ],
+      },
+      {
+        h: 'Governing law',
+        body: [
+          'These terms are governed by Belgian law. Disputes go to the competent courts of Antwerp, unless the law gives you as a consumer the right to go to the court where you live. If there’s a problem, please contact us first at ' + L.email + '; together we usually find a solution quickly.',
+        ],
+      },
+    ],
+    updated: true,
   },
 };
 

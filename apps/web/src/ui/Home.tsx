@@ -42,37 +42,34 @@ export function Home({ onDaily, onEndless, onHowTo, onSettings, profileNotice }:
 
   return (
     <main class="screen home">
-      <div class="logo" aria-hidden="true">
-        <svg viewBox="0 0 120 60">
-          <ellipse cx="22" cy="36" rx="18" ry="12" class="logo-island" />
-          <ellipse cx="98" cy="36" rx="18" ry="12" class="logo-island" />
-          <path d="M36 32h48M36 40h48" class="logo-bridge" />
-        </svg>
-      </div>
-      <h1 class="title">{t('app.title')}</h1>
-      <p class="tagline">{t('app.tagline')}</p>
-      <div class="menu">
-        <button class="btn primary big" onClick={onDaily}>
-          <span>{t('menu.daily', { number })}</span>
-          <small>{t(`menu.daily.${daily}`, { streak: stats?.currentStreak ?? 0 })}</small>
-        </button>
-        <button class="btn big" onClick={onEndless}>
-          <span>{t('menu.endless')}</span>
-          <small>{t('menu.endless.sub', { level: progress.level, best: progress.best })}</small>
-        </button>
-        <div class="menu-row">
-          <button class="btn" onClick={() => setShowStats(true)}>
-            {t('stats.title')}
+      {/* The background shows the PlankWay logo; the heading stays for screen readers. */}
+      <div class="home-backdrop" aria-hidden="true" />
+      <h1 class="sr-only">{t('app.title')}</h1>
+      <div class="home-card">
+        <p class="tagline">{t('app.tagline')}</p>
+        <div class="menu">
+          <button class="btn primary big" onClick={onDaily}>
+            <span>{t('menu.daily', { number })}</span>
+            <small>{t(`menu.daily.${daily}`, { streak: stats?.currentStreak ?? 0 })}</small>
           </button>
-          <button class="btn" onClick={onHowTo}>
-            {t('menu.howto')}
+          <button class="btn big" onClick={onEndless}>
+            <span>{t('menu.endless')}</span>
+            <small>{t('menu.endless.sub', { level: progress.level, best: progress.best })}</small>
           </button>
-          <button class="btn" onClick={() => setShowProfile(true)}>
-            {t('menu.profile')}
-          </button>
-          <button class="btn" onClick={onSettings}>
-            {t('menu.settings')}
-          </button>
+          <div class="menu-row">
+            <button class="btn" onClick={() => setShowStats(true)}>
+              {t('stats.title')}
+            </button>
+            <button class="btn" onClick={onHowTo}>
+              {t('menu.howto')}
+            </button>
+            <button class="btn" onClick={() => setShowProfile(true)}>
+              {t('menu.profile')}
+            </button>
+            <button class="btn" onClick={onSettings}>
+              {t('menu.settings')}
+            </button>
+          </div>
         </div>
       </div>
 

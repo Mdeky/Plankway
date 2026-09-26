@@ -9,5 +9,5 @@ export const LEGAL = {
   email: 'info@dekeyserwebdesign.com',
   companyNumber: 'BE 1040.500.093',
   /** ISO date of the last change to the policies. */
-  lastUpdated: '2026-09-25',
+  lastUpdated: '2026-09-26',
 };

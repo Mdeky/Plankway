@@ -2,6 +2,8 @@
   color-scheme: light;
   --night: 0;
   --bg: #e9f6f5;
+  /* Darkens the home background picture at night. */
+  --backdrop-dim: 0;
   --surface: #ffffff;
   --text: #1d3b45;
   --muted: #4f6a72;
@@ -65,6 +67,7 @@
     color-scheme: dark;
     --night: 1;
     --bg: #0b1426;
+  --backdrop-dim: 0.35;
     --surface: #15233d;
     --text: #e6eefb;
     --muted: #a9b8cf;
@@ -113,6 +116,7 @@
   color-scheme: dark;
   --night: 1;
   --bg: #0b1426;
+  --backdrop-dim: 0.35;
   --surface: #15233d;
   --text: #e6eefb;
   --muted: #a9b8cf;
@@ -195,41 +199,69 @@ h2 {
 .home {
   align-items: center;
   text-align: center;
-  padding-top: 8vh;
+  /* Leaves the logo and bridge in the picture free. */
+  padding-top: clamp(180px, 44dvh, 480px);
 }
 
-.logo svg {
-  width: 140px;
-  height: 70px;
+.home-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: var(--water) url('./assets/background-mobile.webp') center / cover no-repeat;
 }
 
-.logo-island {
-  fill: var(--sand);
-  stroke: var(--sand-edge);
-  stroke-width: 2.5;
+@media (min-aspect-ratio: 4/5) {
+  .home-backdrop {
+    background-image: url('./assets/background-desktop.webp');
+  }
 }
 
-.logo-bridge {
-  stroke: var(--plank);
-  stroke-width: 4;
-  stroke-linecap: round;
+.home-backdrop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgb(4 10 28 / var(--backdrop-dim));
 }
 
-.title {
-  font-size: clamp(2.4rem, 10vw, 3.4rem);
-  letter-spacing: -0.02em;
+/* html and body paint their own background, so the picture sits in layer 0 and the
+   content above it. */
+.home > :not(.home-backdrop, .sr-only, dialog) {
+  position: relative;
+  z-index: 1;
+}
+
+/* Frosted card so the menu stays readable on top of the picture. */
+.home-card,
+.home .site-footer {
+  width: min(100%, 360px);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--surface) 84%, transparent);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 30px rgb(0 0 0 / 0.18);
+}
+
+.home-card {
+  display: grid;
+  justify-items: center;
+  padding: 16px 20px 20px;
 }
 
 .tagline {
-  margin: 0 0 16px;
-  color: var(--muted);
+  margin: 0 0 14px;
+  color: var(--text);
+  font-weight: 600;
 }
 
 .menu {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  width: min(100%, 320px);
+  width: 100%;
+}
+
+.home-card .menu-row {
+  grid-template-columns: 1fr 1fr;
 }
 
 /* ── Buttons ──────────────────────────────────────── */
@@ -861,7 +893,9 @@ a.btn {
 }
 
 .home .site-footer {
-  width: 100%;
+  margin-top: 8px;
+  padding: 8px;
+  border-top: 0;
 }
 
 .page-topbar {

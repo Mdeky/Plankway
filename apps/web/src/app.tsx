@@ -55,7 +55,9 @@ export function App() {
       )}
       {route === 'daily' && <DailyGame onExit={goBack} />}
       {route === 'endless' && <EndlessGame onExit={goBack} />}
-      {(route === 'how-to-play' || route === 'about' || route === 'privacy' || route === 'cookies') && <LazyInfoPage id={route} />}
+      {(route === 'how-to-play' || route === 'about' || route === 'privacy' || route === 'cookies' || route === 'terms') && (
+        <LazyInfoPage id={route} />
+      )}
       {howTo && (
         <HowTo
           onClose={() => {

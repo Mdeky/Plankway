@@ -6,6 +6,7 @@ const LINKS: [Route, Parameters<typeof t>[0]][] = [
   ['about', 'footer.about'],
   ['privacy', 'footer.privacy'],
   ['cookies', 'footer.cookies'],
+  ['terms', 'footer.terms'],
 ];
 
 export function Footer() {
