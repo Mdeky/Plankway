@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'preact/hooks';
-import { t } from '../i18n.ts';
+import { t, type MessageKey } from '../i18n.ts';
 import { loadDailyRecord, loadDailyStats, todayNumber } from '../game/daily-store.ts';
 import type { DailyStats } from '../game/stats.ts';
 import { loadEndlessProgress } from '../game/storage.ts';
@@ -15,15 +15,20 @@ interface Props {
   onEndless(): void;
   onHowTo(): void;
   onSettings(): void;
+  /** Opens the profile dialog with this message (after returning from a sign-in). */
+  profileNotice?: MessageKey | null;
 }
 
-export function Home({ onDaily, onEndless, onHowTo, onSettings }: Props) {
+export function Home({ onDaily, onEndless, onHowTo, onSettings, profileNotice }: Props) {
   const progress = loadEndlessProgress();
   const [number, setNumber] = useState(todayNumber);
   const [daily, setDaily] = useState<DailyState>('new');
   const [stats, setStats] = useState<DailyStats | null>(null);
   const [showStats, setShowStats] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  useEffect(() => {
+    if (profileNotice) setShowProfile(true);
+  }, [profileNotice]);
   const [refresh, setRefresh] = useState(0);
 
   useEffect(() => {
@@ -83,7 +88,9 @@ export function Home({ onDaily, onEndless, onHowTo, onSettings }: Props) {
         </Dialog>
       )}
       <Footer />
-      {showProfile && <ProfileDialog onClose={() => setShowProfile(false)} onDataChanged={() => setRefresh((r) => r + 1)} />}
+      {showProfile && (
+        <ProfileDialog notice={profileNotice} onClose={() => setShowProfile(false)} onDataChanged={() => setRefresh((r) => r + 1)} />
+      )}
     </main>
   );
 }

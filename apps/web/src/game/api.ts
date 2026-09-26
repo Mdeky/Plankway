@@ -161,6 +161,63 @@ export function forgetProfile(): void {
   saveProfileInfo(null);
 }
 
+// ── Accounts ────────────────────────────────────────────────────────────────
+
+export interface Account {
+  providers: string[];
+  displayName: string | null;
+  country: string | null;
+}
+
+export interface Me {
+  id: string;
+  account: Account | null;
+  endless: { best: number; solved: number };
+}
+
+/** Sign-in providers this server offers (empty when offline or none configured). */
+export async function fetchProviders(): Promise<string[]> {
+  const { status, data } = await request('GET', '/auth/providers');
+  return status === 200 && Array.isArray(data?.providers) ? (data.providers as string[]) : [];
+}
+
+/** Starts a sign-in: the server redirects to the provider and back to the home screen. */
+export function signInUrl(provider: string): string {
+  return `/api/auth/${encodeURIComponent(provider)}/start?return=/`;
+}
+
+/** This device's profile and account, or null when offline or without a profile. */
+export async function fetchMe(): Promise<Me | null> {
+  const { status, data } = await request('GET', '/profile/me');
+  if (status !== 200 || !data) return null;
+  const me = data as unknown as Me;
+  const known = loadProfileInfo();
+  // Signing in can switch this device to another profile; a code only belongs to its own.
+  if (known?.id !== me.id) saveProfileInfo({ id: me.id });
+  return me;
+}
+
+export async function fetchRemoteResults(): Promise<RemoteResult[] | null> {
+  const { status, data } = await request('GET', '/profile/stats');
+  return status === 200 && Array.isArray(data?.results) ? (data.results as RemoteResult[]) : null;
+}
+
+export type AccountUpdate = { ok: true; displayName: string | null; country: string | null } | { ok: false; error: string };
+
+export async function updateAccount(changes: { displayName?: string; country?: string | null }): Promise<AccountUpdate> {
+  const { status, data } = await request('PUT', '/profile/account', changes);
+  if (status === 200 && data) return { ok: true, displayName: (data.displayName as string) ?? null, country: (data.country as string) ?? null };
+  return { ok: false, error: typeof data?.error === 'string' ? data.error : 'offline' };
+}
+
+/** Signs this device out. False when the server couldn't be reached. */
+export async function signOut(): Promise<boolean> {
+  const { status } = await request('POST', '/auth/logout');
+  if (status !== 204) return false;
+  saveProfileInfo(null);
+  return true;
+}
+
 /** Replaces the recovery code (the old one stops working). Null when offline. */
 export async function newRecoveryCode(): Promise<ProfileInfo | null> {
   const { status, data } = await request('POST', '/profile/recovery-code');

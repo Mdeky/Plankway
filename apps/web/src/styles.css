@@ -682,7 +682,32 @@ h2 {
   font-family: ui-monospace, 'Cascadia Mono', Menlo, monospace;
 }
 
-.field input:focus-visible {
+.field select {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 2px solid var(--btn-border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+/* Names are text, not codes. */
+.field input[autocomplete='nickname'] {
+  font-family: inherit;
+}
+
+a.btn {
+  text-decoration: none;
+}
+
+.profile-section .dialog-actions {
+  justify-self: stretch;
+  margin-top: 4px;
+}
+
+.field input:focus-visible,
+.field select:focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 1px;
 }

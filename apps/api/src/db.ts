@@ -26,4 +26,9 @@ export interface Env {
   DB: D1Database;
   /** Server-side secret mixed into every stored hash. */
   HASH_PEPPER?: string;
+  /** Sign in with Google (optional; the button only shows when both are set). */
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
+  /** Local development only: where the app runs, e.g. http://localhost:5173. */
+  SITE_ORIGIN?: string;
 }

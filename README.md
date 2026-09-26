@@ -143,7 +143,9 @@ production the Worker is routed on the same domain as the site, so no CORS is ne
 | `POST /api/profile/recovery-code` | Replaces a lost recovery code; the old one stops working. |
 | `DELETE /api/profile` | Deletes the profile and all its results (GDPR). |
 
-- Tokens, recovery codes and IPs are only stored as HMAC-SHA256 with the `HASH_PEPPER` secret.
+- Tokens, recovery codes, IPs and sign-in ids are only stored as HMAC-SHA256 with the `HASH_PEPPER` secret.
+- Sessions: one row per device in `sessions`, so a profile can be used on several devices at once.
+  Recovering a profile or signing in adds a session; it never signs out the other devices.
 - Rate limits per hour: profile creation 10/IP, recovery 10/IP, daily results 60/profile, endless results
   240/profile, start tokens 300/profile.
 - Verified times: `POST /api/{daily|endless}/:id/start` returns a start token (an HMAC over profile, puzzle
@@ -151,6 +153,26 @@ production the Worker is routed on the same domain as the site, so no CORS is ne
   the time the server saw pass (plus 5 s) and is at least 150 ms per bridge. Unverified results still count
   for streaks and progress; leaderboards will only use verified ones.
 - Tests run the real app against SQLite (`node:sqlite`) with the same migrations.
+
+### Accounts (sign in with Google)
+
+Optional. Without an account everything keeps working with the anonymous profile.
+
+- Flow: `GET /api/auth/google/start` → Google (authorization code + PKCE + nonce, scope `openid`
+  only: no e-mail, no name) → `GET /api/auth/google/callback` → back to the app with `?login=new`,
+  `welcome-back`, `cancelled` or `error`. State, verifier and nonce travel in a 10-minute httpOnly cookie.
+- The ID token comes straight from Google's token endpoint over TLS, so issuer, audience, expiry and
+  nonce are checked instead of its signature (OpenID Connect Core 3.1.3.7).
+- A new account is linked to the device's current profile. Signing in to an existing account on a
+  device with an anonymous profile moves that progress into the account and deletes the anonymous one.
+- Once signed in: display name (3–20 characters, word filter in `apps/api/src/names.ts`) and country
+  (suggested from Cloudflare's `cf.country`), via `PUT /api/profile/account`. `GET /api/profile/me`
+  returns the account and endless progress. `POST /api/auth/logout` ends this device's session only.
+- Setup: create an OAuth client ("Web application") in Google Cloud Console with redirect URIs
+  `https://plankway.com/api/auth/google/callback`, `https://www.plankway.com/api/auth/google/callback`
+  and `http://localhost:5173/api/auth/google/callback`, then `wrangler secret put GOOGLE_CLIENT_ID` and
+  `wrangler secret put GOOGLE_CLIENT_SECRET`. The button only appears when both are set. Locally, put
+  them in `.dev.vars` together with `SITE_ORIGIN=http://localhost:5173`.
 
 ### Daily puzzles and endless levels
 

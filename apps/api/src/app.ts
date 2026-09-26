@@ -4,6 +4,8 @@ import { HTTPException } from 'hono/http-exception';
 import {
   computeStats,
   formatDate,
+  isCountry,
+  normalizeDisplayName,
   parseDate,
   parsePuzzle,
   parseSolution,
@@ -14,10 +16,15 @@ import {
   type Solution,
 } from '@bridgle/core';
 import type { Env } from './db.ts';
+import { isNameAllowed } from './names.ts';
+import { authorizeUrl, configuredProviders, exchangeCode, OAuthError, pkceChallenge, type Provider } from './oauth.ts';
 import { keyedHash, newRecoveryCode, newToken, normalizeRecoveryCode, signStart, verifyStart, type PlayMode } from './security.ts';
 
 export const COOKIE_NAME = 'plankway_token';
 const COOKIE_MAX_AGE = 400 * 24 * 3600; // the longest browsers accept
+/** Short-lived cookie that carries state, PKCE verifier and nonce through a sign-in. */
+export const OAUTH_COOKIE = 'plankway_oauth';
+const OAUTH_MAX_AGE = 10 * 60;
 
 /** Requests per hour. */
 export const RATE_LIMITS = {
@@ -26,6 +33,8 @@ export const RATE_LIMITS = {
   submitResult: 60,
   submitEndless: 240,
   start: 300,
+  signIn: 30,
+  account: 30,
 } as const;
 
 const MAX_TIME_MS = 7 * 24 * 3600 * 1000;
@@ -42,6 +51,8 @@ const MIN_MS_PER_BRIDGE = 150;
 export interface AppOptions {
   /** Injectable clock for tests. */
   now?: () => number;
+  /** Injectable fetch for tests (calls to sign-in providers). */
+  fetch?: typeof fetch;
 }
 
 type AppEnv = { Bindings: Env; Variables: { profileId: string } };
@@ -59,12 +70,13 @@ function dateAtOffset(now: number, hours: number): CalendarDate {
   return { y: d.getUTCFullYear(), m: d.getUTCMonth() + 1, d: d.getUTCDate() };
 }
 
-function fail(status: 400 | 401 | 404 | 429 | 500, error: string): never {
+function fail(status: 400 | 401 | 403 | 404 | 429 | 500, error: string): never {
   throw new HTTPException(status, { res: Response.json({ error }, { status }) });
 }
 
 export function createApp(options: AppOptions = {}) {
   const now = options.now ?? Date.now;
+  const fetcher = options.fetch ?? ((input, init) => fetch(input, init));
   const app = new Hono<AppEnv>().basePath('/api');
 
   /** Latest date on earth right now (UTC+14) and earliest (UTC−12). */
@@ -102,9 +114,54 @@ export function createApp(options: AppOptions = {}) {
     const token = getCookie(c, COOKIE_NAME);
     if (!token) return null;
     const hash = await keyedHash(pepper(c), 'token', token);
-    const row = await c.env.DB.prepare('SELECT id FROM profiles WHERE token_hash = ?').bind(hash).first<{ id: string }>();
-    return row?.id ?? null;
+    const row = await c.env.DB.prepare('SELECT profile_id FROM sessions WHERE token_hash = ?').bind(hash).first<{ profile_id: string }>();
+    return row?.profile_id ?? null;
   };
+
+  /** Signs this device in to a profile: a new session next to any other devices. */
+  const startSession = async (c: Context<AppEnv>, profileId: string) => {
+    const token = newToken();
+    await c.env.DB.prepare('INSERT INTO sessions (token_hash, profile_id, created_at) VALUES (?, ?, ?)')
+      .bind(await keyedHash(pepper(c), 'token', token), profileId, now())
+      .run();
+    issueCookie(c, token);
+  };
+
+  /** Ends this device's session (other devices stay signed in). */
+  const endSession = async (c: Context<AppEnv>) => {
+    const token = getCookie(c, COOKIE_NAME);
+    if (token) await c.env.DB.prepare('DELETE FROM sessions WHERE token_hash = ?').bind(await keyedHash(pepper(c), 'token', token)).run();
+  };
+
+  const createProfile = async (c: Context<AppEnv>, country: string | null = null) => {
+    const p = pepper(c);
+    const id = crypto.randomUUID();
+    const recoveryCode = newRecoveryCode();
+    // profiles.token_hash is legacy (sessions hold the real tokens) but still NOT NULL UNIQUE.
+    await c.env.DB.prepare('INSERT INTO profiles (id, token_hash, recovery_hash, country, created_at) VALUES (?, ?, ?, ?, ?)')
+      .bind(id, await keyedHash(p, 'token', newToken()), await keyedHash(p, 'recovery', recoveryCode), country, now())
+      .run();
+    await startSession(c, id);
+    return { id, recoveryCode };
+  };
+
+  const hasAccount = async (c: Context<AppEnv>, profileId: string) =>
+    !!(await c.env.DB.prepare('SELECT 1 AS x FROM identities WHERE profile_id = ?').bind(profileId).first());
+
+  /** Everything that belongs to a profile, for deletion. */
+  const deleteProfileRows = (c: Context<AppEnv>, profileId: string) => [
+    c.env.DB.prepare('DELETE FROM results WHERE profile_id = ?').bind(profileId),
+    c.env.DB.prepare('DELETE FROM endless_results WHERE profile_id = ?').bind(profileId),
+    c.env.DB.prepare('DELETE FROM sessions WHERE profile_id = ?').bind(profileId),
+    c.env.DB.prepare('DELETE FROM identities WHERE profile_id = ?').bind(profileId),
+    c.env.DB.prepare('DELETE FROM rate_limits WHERE key IN (?, ?, ?, ?)').bind(
+      `submitResult:${profileId}`,
+      `submitEndless:${profileId}`,
+      `start:${profileId}`,
+      `account:${profileId}`,
+    ),
+    c.env.DB.prepare('DELETE FROM profiles WHERE id = ?').bind(profileId),
+  ];
 
   const requireProfile = async (c: Context<AppEnv>): Promise<string> => {
     const id = await findProfile(c);
@@ -287,14 +344,7 @@ export function createApp(options: AppOptions = {}) {
     if (existing) return c.json({ id: existing, existing: true });
 
     await rateLimit(c, 'createProfile', await ipKey(c));
-    const p = pepper(c);
-    const id = crypto.randomUUID();
-    const token = newToken();
-    const recoveryCode = newRecoveryCode();
-    await c.env.DB.prepare('INSERT INTO profiles (id, token_hash, recovery_hash, created_at) VALUES (?, ?, ?, ?)')
-      .bind(id, await keyedHash(p, 'token', token), await keyedHash(p, 'recovery', recoveryCode), now())
-      .run();
-    issueCookie(c, token);
+    const { id, recoveryCode } = await createProfile(c);
     return c.json({ id, recoveryCode, existing: false }, 201);
   });
 
@@ -327,26 +377,191 @@ export function createApp(options: AppOptions = {}) {
       .first<{ id: string }>();
     if (!row) fail(404, 'unknown-code');
 
-    // A fresh token for this device; other devices keep working until they're recovered again.
-    const token = newToken();
-    await c.env.DB.prepare('UPDATE profiles SET token_hash = ? WHERE id = ?').bind(await keyedHash(p, 'token', token), row.id).run();
-    issueCookie(c, token);
+    // A new session for this device; other devices keep theirs.
+    await endSession(c);
+    await startSession(c, row.id);
     const today = c.req.query('today');
     return c.json({ id: row.id, ...(await statsFor(c, row.id, today ? Number(today) : null)) });
   });
 
   app.delete('/profile', async (c) => {
     const profileId = await requireProfile(c);
-    await c.env.DB.batch([
-      c.env.DB.prepare('DELETE FROM results WHERE profile_id = ?').bind(profileId),
-      c.env.DB.prepare('DELETE FROM endless_results WHERE profile_id = ?').bind(profileId),
-      c.env.DB.prepare('DELETE FROM rate_limits WHERE key IN (?, ?, ?)').bind(
-        `submitResult:${profileId}`,
-        `submitEndless:${profileId}`,
-        `start:${profileId}`,
-      ),
-      c.env.DB.prepare('DELETE FROM profiles WHERE id = ?').bind(profileId),
-    ]);
+    await c.env.DB.batch(deleteProfileRows(c, profileId));
+    deleteCookie(c, COOKIE_NAME, { path: '/api', secure: true });
+    return c.body(null, 204);
+  });
+
+  // ── Accounts ──────────────────────────────────────────────────────────────
+
+  app.get('/profile/me', async (c) => {
+    const profileId = await requireProfile(c);
+    const profile = await c.env.DB.prepare('SELECT display_name, country FROM profiles WHERE id = ?')
+      .bind(profileId)
+      .first<{ display_name: string | null; country: string | null }>();
+    const { results: ids } = await c.env.DB.prepare('SELECT DISTINCT provider FROM identities WHERE profile_id = ?')
+      .bind(profileId)
+      .all<{ provider: string }>();
+    const endless = await c.env.DB.prepare('SELECT MAX(level) AS best, COUNT(*) AS solved FROM endless_results WHERE profile_id = ?')
+      .bind(profileId)
+      .first<{ best: number | null; solved: number }>();
+    return c.json({
+      id: profileId,
+      account: ids.length > 0 ? { providers: ids.map((r) => r.provider), displayName: profile?.display_name ?? null, country: profile?.country ?? null } : null,
+      endless: { best: endless?.best ?? 0, solved: endless?.solved ?? 0 },
+    });
+  });
+
+  app.put('/profile/account', async (c) => {
+    const profileId = await requireProfile(c);
+    await rateLimit(c, 'account', profileId);
+    if (!(await hasAccount(c, profileId))) fail(403, 'account-required');
+    const body = await readJson(c);
+    const sets: string[] = [];
+    const values: unknown[] = [];
+    if (body.displayName !== undefined) {
+      const name = normalizeDisplayName(body.displayName);
+      if (!name) fail(400, 'invalid-name');
+      if (!isNameAllowed(name)) fail(400, 'name-not-allowed');
+      sets.push('display_name = ?');
+      values.push(name);
+    }
+    if (body.country !== undefined) {
+      if (body.country !== null && !isCountry(body.country)) fail(400, 'invalid-country');
+      sets.push('country = ?');
+      values.push(body.country);
+    }
+    if (sets.length > 0) await c.env.DB.prepare(`UPDATE profiles SET ${sets.join(', ')} WHERE id = ?`).bind(...values, profileId).run();
+    const row = await c.env.DB.prepare('SELECT display_name, country FROM profiles WHERE id = ?')
+      .bind(profileId)
+      .first<{ display_name: string | null; country: string | null }>();
+    return c.json({ displayName: row?.display_name ?? null, country: row?.country ?? null });
+  });
+
+  // ── Sign-in ───────────────────────────────────────────────────────────────
+
+  app.get('/auth/providers', (c) => c.json({ providers: configuredProviders(c.env).map((p) => p.id) }));
+
+  const providerFor = (c: Context<AppEnv>): Provider => {
+    const provider = configuredProviders(c.env).find((p) => p.id === c.req.param('provider'));
+    if (!provider) fail(404, 'unknown-provider');
+    return provider;
+  };
+
+  /**
+   * The site as the player sees it, so cookies line up: the host that was asked for,
+   * always https. Local development sets SITE_ORIGIN, because wrangler dev rewrites
+   * URL and Host to the production domain.
+   */
+  const siteOrigin = (c: Context<AppEnv>): string => {
+    if (c.env.SITE_ORIGIN) return c.env.SITE_ORIGIN;
+    const url = new URL(c.req.url);
+    return url.hostname === 'localhost' ? url.origin : `https://${url.host}`;
+  };
+
+  /** Where the provider sends the player back. */
+  const callbackUrl = (c: Context<AppEnv>, provider: Provider) => `${siteOrigin(c)}/api/auth/${provider.id}/callback`;
+
+  /** Only paths on this site, never another host ("//evil.example"). */
+  const safeReturn = (value: unknown): string =>
+    typeof value === 'string' && /^\/(?![\/\\])[\w\-./]{0,100}$/.test(value) ? value : '/';
+
+  app.get('/auth/:provider/start', async (c) => {
+    const provider = providerFor(c);
+    await rateLimit(c, 'signIn', await ipKey(c));
+    const state = newToken();
+    const verifier = newToken();
+    const nonce = newToken();
+    const returnTo = safeReturn(c.req.query('return'));
+    setCookie(c, OAUTH_COOKIE, [provider.id, state, verifier, nonce, returnTo].join(' '), {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'Lax',
+      path: '/api/auth',
+      maxAge: OAUTH_MAX_AGE,
+    });
+    return c.redirect(
+      authorizeUrl(provider, { redirectUri: callbackUrl(c, provider), state, nonce, codeChallenge: await pkceChallenge(verifier) }),
+      302,
+    );
+  });
+
+  app.get('/auth/:provider/callback', async (c) => {
+    const provider = providerFor(c);
+    const [cookieProvider, state, verifier, nonce, returnTo] = (getCookie(c, OAUTH_COOKIE) ?? '').split(' ');
+    deleteCookie(c, OAUTH_COOKIE, { path: '/api/auth', secure: true });
+    const back = (outcome: string) => {
+      const url = new URL(safeReturn(returnTo), siteOrigin(c));
+      url.searchParams.set('login', outcome);
+      return c.redirect(url.toString(), 302);
+    };
+
+    const code = c.req.query('code');
+    if (!code || !state || cookieProvider !== provider.id || c.req.query('state') !== state) {
+      return back(c.req.query('error') === 'access_denied' ? 'cancelled' : 'error');
+    }
+    let subject: string;
+    try {
+      subject = await exchangeCode(provider, { code, redirectUri: callbackUrl(c, provider), verifier: verifier!, nonce: nonce!, now: now() }, fetcher);
+    } catch (err) {
+      if (!(err instanceof OAuthError)) throw err;
+      console.warn('sign-in failed:', err.message);
+      return back('error');
+    }
+
+    const subjectHash = await keyedHash(pepper(c), 'identity', `${provider.id}:${subject}`);
+    const linked = await c.env.DB.prepare('SELECT profile_id FROM identities WHERE provider = ? AND subject_hash = ?')
+      .bind(provider.id, subjectHash)
+      .first<{ profile_id: string }>();
+    const current = await findProfile(c);
+    const country = (c.req.raw as { cf?: { country?: unknown } }).cf?.country;
+    const guessedCountry = isCountry(country) ? country : null;
+
+    if (linked) {
+      // Known account. Progress made anonymously on this device moves into it.
+      if (current && current !== linked.profile_id) {
+        if (await hasAccount(c, current)) {
+          await endSession(c);
+        } else {
+          await c.env.DB.batch([
+            c.env.DB.prepare(
+              `INSERT OR IGNORE INTO results (profile_id, puzzle_number, time_ms, undos, hints, verified, solved_at)
+               SELECT ?, puzzle_number, time_ms, undos, hints, verified, solved_at FROM results WHERE profile_id = ?`,
+            ).bind(linked.profile_id, current),
+            c.env.DB.prepare(
+              `INSERT OR IGNORE INTO endless_results (profile_id, level, time_ms, hints, verified, solved_at)
+               SELECT ?, level, time_ms, hints, verified, solved_at FROM endless_results WHERE profile_id = ?`,
+            ).bind(linked.profile_id, current),
+            ...deleteProfileRows(c, current),
+          ]);
+        }
+      }
+      if (current !== linked.profile_id) await startSession(c, linked.profile_id);
+      return back('welcome-back');
+    }
+
+    // New account: attach it to this device's profile, unless that one already has a
+    // different account of this provider (then the new account gets a fresh profile).
+    let profileId = current;
+    if (profileId) {
+      const other = await c.env.DB.prepare('SELECT 1 AS x FROM identities WHERE profile_id = ? AND provider = ?').bind(profileId, provider.id).first();
+      if (other) {
+        await endSession(c);
+        profileId = null;
+      }
+    }
+    if (!profileId) profileId = (await createProfile(c, guessedCountry)).id;
+    else if (guessedCountry) {
+      await c.env.DB.prepare('UPDATE profiles SET country = COALESCE(country, ?) WHERE id = ?').bind(guessedCountry, profileId).run();
+    }
+    await c.env.DB.prepare('INSERT INTO identities (provider, subject_hash, profile_id, created_at) VALUES (?, ?, ?, ?)')
+      .bind(provider.id, subjectHash, profileId, now())
+      .run();
+    return back('new');
+  });
+
+  /** Signs this device out. The account and its progress stay on the server. */
+  app.post('/auth/logout', async (c) => {
+    await endSession(c);
     deleteCookie(c, COOKIE_NAME, { path: '/api', secure: true });
     return c.body(null, 204);
   });

@@ -1,3 +1,14 @@
 # Copy to .dev.vars for local development. Use a long random value in production:
 #   wrangler secret put HASH_PEPPER
 HASH_PEPPER=local-dev-pepper-change-me
+
+# Sign in with Google (optional). OAuth client of type "Web application" in Google Cloud
+# Console; redirect URIs: https://plankway.com/api/auth/google/callback,
+# https://www.plankway.com/api/auth/google/callback, http://localhost:5173/api/auth/google/callback
+#   wrangler secret put GOOGLE_CLIENT_ID
+#   wrangler secret put GOOGLE_CLIENT_SECRET
+# GOOGLE_CLIENT_ID=
+# GOOGLE_CLIENT_SECRET=
+
+# Local development: where the app runs (wrangler dev rewrites URLs to the production domain).
+SITE_ORIGIN=http://localhost:5173

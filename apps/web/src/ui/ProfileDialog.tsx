@@ -2,16 +2,27 @@ import { useState } from 'preact/hooks';
 import { t, type MessageKey } from '../i18n.ts';
 import { ensureProfile, loadProfileInfo, newRecoveryCode } from '../game/api.ts';
 import { deleteAllData, recoverWithCode } from '../game/sync.ts';
+import { AccountSection } from './AccountSection.tsx';
 import { Dialog } from './Dialog.tsx';
 
 type Busy = null | 'connect' | 'recover' | 'delete';
 
-export function ProfileDialog({ onClose, onDataChanged }: { onClose(): void; onDataChanged(): void }) {
+export function ProfileDialog({
+  onClose,
+  onDataChanged,
+  notice,
+}: {
+  onClose(): void;
+  onDataChanged(): void;
+  /** Shown in the account section, e.g. right after signing in. */
+  notice?: MessageKey | null;
+}) {
   const [profile, setProfile] = useState(loadProfileInfo);
   const [code, setCode] = useState('');
   const [message, setMessage] = useState<MessageKey | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [busy, setBusy] = useState<Busy>(null);
+  const [accountNotice, setAccountNotice] = useState(notice ?? null);
 
   const connect = async () => {
     setBusy('connect');
@@ -61,6 +72,17 @@ export function ProfileDialog({ onClose, onDataChanged }: { onClose(): void; onD
   return (
     <Dialog title={t('profile.title')} onClose={onClose}>
       <p class="muted">{t('profile.intro')}</p>
+
+      <AccountSection
+        key={profile?.id ?? 'none'}
+        notice={accountNotice}
+        onSignedOut={() => {
+          setAccountNotice(null);
+          setProfile(null);
+          setMessage('account.signedOut');
+          onDataChanged();
+        }}
+      />
 
       <section class="profile-section">
         <h3>{t('profile.codeTitle')}</h3>

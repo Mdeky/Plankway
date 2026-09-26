@@ -114,6 +114,8 @@ const nl: Record<PageId, Page> = {
             'Spelgegevens op je toestel: je voortgang, daily-resultaten, statistieken en instellingen worden in de opslag van je browser bewaard (localStorage en IndexedDB). Dat is nodig om het spel te laten werken en blijft op je toestel.',
             'Anoniem profiel: bij je eerste bezoek maken we een profiel met een willekeurige code, zodat je reeks bewaard blijft en je ze op een ander toestel kan verderzetten. Je toestel krijgt een geheime sleutel in een cookie; op onze server bewaren we daarvan enkel een onomkeerbare hash. Hetzelfde geldt voor je herstelcode.',
             'Daily-resultaten: per opgeloste daily het puzzelnummer, je tijd, het aantal undo’s en hints, en het tijdstip. Je oplossing wordt gecontroleerd maar niet bewaard.',
+            'Inloggen met Google (optioneel): als je inlogt, vragen we Google enkel om te bevestigen wie je bent (scope "openid"). We krijgen geen e-mailadres, naam of foto. We bewaren enkel een onomkeerbare hash van je Google-gebruikers-id, gekoppeld aan je profiel, zodat je op elk toestel bij je voortgang kan. Per ingelogd toestel bewaren we een hash van een sessiesleutel. Uitloggen wist die sessie; je profiel wissen wist ook de koppeling met Google.',
+            'Naam en land (optioneel, enkel met een account): de naam en het land die je zelf kiest, om je later in de klassementen te tonen. Bij het inloggen stellen we je land voor op basis van de locatie die Cloudflare aan je verbinding koppelt; je kan dat altijd wijzigen of leegmaken.',
             'Eindeloos-resultaten: per opgelost level het levelnummer, je tijd, het aantal hints en het tijdstip. Om tijden te kunnen controleren, geeft de server bij de start van een puzzel een ondertekend starttijdstip mee; dat wordt niet apart bewaard.',
             'IP-adres: nodig om de website te leveren (door onze hostingpartner Cloudflare). Onze eigen server gebruikt het enkel als onomkeerbare hash om misbruik te beperken (maximaal aantal aanvragen per uur) en wist die na 24 uur.',
             'Bezoekersstatistieken: we gebruiken Cloudflare Web Analytics. Dat werkt zonder cookies en maakt geen profielen van bezoekers.',
@@ -135,7 +137,7 @@ const nl: Record<PageId, Page> = {
         h: 'Hoe lang we gegevens bewaren',
         body: [
           [
-            'Je profiel en daily-resultaten: tot je ze zelf wist via Profiel → Mijn data wissen.',
+            'Je profiel, resultaten, naam, land en koppeling met Google: tot je ze zelf wist via Profiel → Mijn data wissen.',
             'Gehashte IP-adressen voor misbruikbeperking: maximaal 24 uur.',
             'Gegevens op je toestel: tot je ze wist in de app of in je browser.',
           ],
@@ -144,7 +146,7 @@ const nl: Record<PageId, Page> = {
       {
         h: 'Wie je gegevens nog ziet',
         body: [
-          'Cloudflare (hosting, database en statistieken) verwerkt gegevens in onze opdracht. Google treedt voor advertenties op als zelfstandige verantwoordelijke; lees hoe Google gegevens gebruikt op policies.google.com/technologies/partner-sites. Deze partijen kunnen gegevens buiten de EU verwerken, met de wettelijke waarborgen (EU-standaardcontractbepalingen of het EU-VS Data Privacy Framework).',
+          'Cloudflare (hosting, database en statistieken) verwerkt gegevens in onze opdracht. Als je inlogt met Google, verwerkt Google die aanmelding volgens zijn eigen privacybeleid. Google treedt voor advertenties op als zelfstandige verantwoordelijke; lees hoe Google gegevens gebruikt op policies.google.com/technologies/partner-sites. Deze partijen kunnen gegevens buiten de EU verwerken, met de wettelijke waarborgen (EU-standaardcontractbepalingen of het EU-VS Data Privacy Framework).',
           'We verkopen je gegevens nooit.',
         ],
       },
@@ -170,7 +172,8 @@ const nl: Record<PageId, Page> = {
         h: 'Noodzakelijk (geen toestemming nodig)',
         body: [
           [
-            'plankway_token — onze eigen cookie met de geheime sleutel van je anonieme profiel. Enkel leesbaar door onze server (HttpOnly, Secure). Bewaard tot 400 dagen.',
+            'plankway_token — onze eigen cookie met de geheime sleutel van je profiel op dit toestel. Enkel leesbaar door onze server (HttpOnly, Secure). Bewaard tot 400 dagen.',
+            'plankway_oauth — enkel tijdens het inloggen met Google: beveiligt de aanmelding tegen misbruik. Wordt meteen daarna gewist (maximaal 10 minuten).',
             'Opslag in je browser (localStorage/IndexedDB) voor je voortgang, statistieken, instellingen en herstelcode. Dat zijn technisch geen cookies, maar ze blijven ook op je toestel.',
           ],
         ],
@@ -288,6 +291,8 @@ const en: Record<PageId, Page> = {
             'Game data on your device: your progress, daily results, statistics and settings are kept in your browser’s storage (localStorage and IndexedDB). This is needed for the game to work and stays on your device.',
             'Anonymous profile: on your first visit we create a profile with a random id, so your streak is kept and you can continue it on another device. Your device gets a secret key in a cookie; our server only stores an irreversible hash of it. The same goes for your recovery code.',
             'Daily results: for each solved daily the puzzle number, your time, the number of undos and hints, and when you solved it. Your solution is checked but not stored.',
+            'Sign in with Google (optional): when you sign in, we only ask Google to confirm who you are (scope "openid"). We get no e-mail address, name or photo. We only keep an irreversible hash of your Google user id, linked to your profile, so you can reach your progress on any device. For each signed-in device we keep a hash of a session key. Signing out deletes that session; deleting your profile also deletes the link with Google.',
+            'Name and country (optional, only with an account): the name and country you choose yourself, to show you on leaderboards later. When you sign in we suggest a country based on the location Cloudflare attaches to your connection; you can change or clear it at any time.',
             'Endless results: for each solved level the level number, your time, the number of hints and when you solved it. To check times, the server hands out a signed start time when a puzzle begins; it is not stored separately.',
             'IP address: needed to deliver the website (by our hosting partner Cloudflare). Our own server only uses it as an irreversible hash to limit abuse (a maximum number of requests per hour) and deletes it after 24 hours.',
             'Visitor statistics: we use Cloudflare Web Analytics, which works without cookies and doesn’t build visitor profiles.',
@@ -309,7 +314,7 @@ const en: Record<PageId, Page> = {
         h: 'How long we keep data',
         body: [
           [
-            'Your profile and daily results: until you delete them via Profile → Delete my data.',
+            'Your profile, results, name, country and link with Google: until you delete them via Profile → Delete my data.',
             'Hashed IP addresses for abuse limiting: at most 24 hours.',
             'Data on your device: until you delete it in the app or in your browser.',
           ],
@@ -318,7 +323,7 @@ const en: Record<PageId, Page> = {
       {
         h: 'Who else sees your data',
         body: [
-          'Cloudflare (hosting, database and statistics) processes data on our behalf. For ads, Google acts as an independent controller; see how Google uses data at policies.google.com/technologies/partner-sites. These parties may process data outside the EU with the legal safeguards (EU standard contractual clauses or the EU–US Data Privacy Framework).',
+          'Cloudflare (hosting, database and statistics) processes data on our behalf. If you sign in with Google, Google handles that sign-in under its own privacy policy. For ads, Google acts as an independent controller; see how Google uses data at policies.google.com/technologies/partner-sites. These parties may process data outside the EU with the legal safeguards (EU standard contractual clauses or the EU–US Data Privacy Framework).',
           'We never sell your data.',
         ],
       },
@@ -344,7 +349,8 @@ const en: Record<PageId, Page> = {
         h: 'Necessary (no consent needed)',
         body: [
           [
-            'plankway_token — our own cookie with the secret key of your anonymous profile. Only readable by our server (HttpOnly, Secure). Kept for up to 400 days.',
+            'plankway_token — our own cookie with the secret key of your profile on this device. Only readable by our server (HttpOnly, Secure). Kept for up to 400 days.',
+            'plankway_oauth — only while signing in with Google: protects the sign-in against abuse. Deleted right after (at most 10 minutes).',
             'Browser storage (localStorage/IndexedDB) for your progress, statistics, settings and recovery code. Technically not cookies, but they also stay on your device.',
           ],
         ],

@@ -2,16 +2,21 @@ import { dateForNumber, formatDate } from '@bridgle/core';
 import {
   deleteRemoteProfile,
   ensureProfile,
+  fetchMe,
+  fetchRemoteResults,
   forgetProfile,
   recoverProfile,
+  signOut,
   submitEndless,
   submitResult,
+  type Me,
   type RecoverOutcome,
+  type RemoteResult,
   type SubmitOutcome,
 } from './api.ts';
 import { idbClear, idbGetAll, idbPut, STORES } from './idb.ts';
 import type { DailyRecord } from './stats.ts';
-import { loadPendingEndless, removePendingEndless } from './storage.ts';
+import { clearEndlessGame, loadEndlessGame, loadEndlessProgress, loadPendingEndless, removePendingEndless, saveEndlessProgress } from './storage.ts';
 
 let running: Promise<void> | null = null;
 
@@ -62,8 +67,16 @@ async function doSync(): Promise<void> {
 export async function recoverWithCode(code: string): Promise<RecoverOutcome> {
   const outcome = await recoverProfile(code);
   if (!outcome.ok) return outcome;
+  await mergeRemoteResults(outcome.results);
+  // Results solved on this device before linking go to the recovered profile.
+  await syncResults();
+  return outcome;
+}
+
+/** Adds daily results from the server that this device doesn't have yet. */
+async function mergeRemoteResults(results: RemoteResult[]): Promise<void> {
   const local = new Map((await idbGetAll<DailyRecord>(STORES.daily)).map((r) => [r.number, r]));
-  for (const res of outcome.results) {
+  for (const res of results) {
     if (local.get(res.number)?.solved) continue;
     const record: DailyRecord = {
       number: res.number,
@@ -78,9 +91,49 @@ export async function recoverWithCode(code: string): Promise<RecoverOutcome> {
     };
     await idbPut(STORES.daily, record, record.number);
   }
-  // Results solved on this device before linking go to the recovered profile.
+}
+
+/**
+ * After signing in: this device may now belong to an account with progress from other
+ * devices. Pulls that in (daily results, furthest endless level), then sends what only
+ * this device has.
+ */
+export async function afterSignIn(): Promise<Me | null> {
+  const me = await fetchMe();
+  if (!me) return null;
+  const results = await fetchRemoteResults();
+  if (results) await mergeRemoteResults(results);
+
+  const local = loadEndlessProgress();
+  if (me.endless.best > local.best) {
+    const level = Math.max(local.level, me.endless.best + 1);
+    saveEndlessProgress({ level, best: me.endless.best, solved: Math.max(local.solved, me.endless.solved) });
+    // A level in progress below the account's level is already done elsewhere.
+    const saved = loadEndlessGame();
+    if (saved && saved.level < level) clearEndlessGame();
+  }
   await syncResults();
-  return outcome;
+  return me;
+}
+
+/** Signs this device out and clears its local game data; the account keeps everything. */
+export async function signOutDevice(): Promise<boolean> {
+  await syncResults();
+  if (!(await signOut())) return false;
+  await clearLocalData();
+  return true;
+}
+
+async function clearLocalData(): Promise<void> {
+  await idbClear(STORES.daily);
+  try {
+    for (const key of Object.keys(localStorage)) {
+      // The tutorial doesn't need to show again on this device.
+      if (key.startsWith('bridgle.') && key !== 'bridgle.tutorial.v1') localStorage.removeItem(key);
+    }
+  } catch {
+    // ignore
+  }
 }
 
 /**
@@ -91,11 +144,6 @@ export async function deleteAllData(): Promise<{ server: boolean }> {
   const server = await deleteRemoteProfile();
   if (!server) return { server };
   forgetProfile();
-  await idbClear(STORES.daily);
-  try {
-    for (const key of Object.keys(localStorage)) if (key.startsWith('bridgle.')) localStorage.removeItem(key);
-  } catch {
-    // ignore
-  }
+  await clearLocalData();
   return { server };
 }
