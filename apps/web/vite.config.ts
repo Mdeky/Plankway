@@ -29,7 +29,7 @@ function serviceWorker(): Plugin {
       const files = walk(outDir)
         .map((f) => relative(outDir, f).split(sep).join('/'))
         // Crawler-only files are not needed offline.
-        .filter((f) => !['sw.js', 'robots.txt', '_headers', 'sitemap.xml', 'og-image.jpg', '404.html'].includes(f) && !f.endsWith('.map'))
+        .filter((f) => !['sw.js', 'robots.txt', 'ads.txt', '_headers', 'sitemap.xml', 'og-image.jpg', '404.html'].includes(f) && !f.endsWith('.map'))
         .sort();
       const template = readFileSync(resolve(outDir, '..', 'sw', 'sw.js'), 'utf8');
       const hash = createHash('sha256').update(template);
