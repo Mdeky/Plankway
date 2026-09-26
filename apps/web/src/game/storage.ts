@@ -49,6 +49,9 @@ export function markTutorialSeen(): void {
 
 const ENDLESS_KEY = 'bridgle.endless.v1';
 const ENDLESS_GAME_KEY = 'bridgle.endless.game.v1';
+const ENDLESS_PENDING_KEY = 'bridgle.endless.pending.v1';
+/** Offline results waiting to be sent; the oldest are dropped beyond this. */
+const MAX_PENDING = 500;
 
 export interface EndlessProgress {
   /** Level currently being played. */
@@ -78,6 +81,7 @@ export interface SavedGame {
   elapsedMs: number;
   undos: number;
   hints: number;
+  startToken?: string;
 }
 
 interface RawSavedGame {
@@ -88,6 +92,7 @@ interface RawSavedGame {
   elapsedMs: number;
   undos: number;
   hints: number;
+  startToken?: string;
 }
 
 export function loadEndlessGame(): SavedGame | null {
@@ -102,6 +107,7 @@ export function loadEndlessGame(): SavedGame | null {
       elapsedMs: Number(raw.elapsedMs) || 0,
       undos: Number(raw.undos) || 0,
       hints: Number(raw.hints) || 0,
+      startToken: typeof raw.startToken === 'string' ? raw.startToken : undefined,
     };
   } catch {
     remove(ENDLESS_GAME_KEY);
@@ -118,10 +124,38 @@ export function saveEndlessGame(game: SavedGame): void {
     elapsedMs: Math.round(game.elapsedMs),
     undos: game.undos,
     hints: game.hints,
+    startToken: game.startToken,
   };
   write(ENDLESS_GAME_KEY, raw);
 }
 
 export function clearEndlessGame(): void {
   remove(ENDLESS_GAME_KEY);
+}
+
+/** A solved endless level that the server hasn't accepted yet. */
+export interface PendingEndless {
+  level: number;
+  timeMs: number;
+  hints: number;
+  /** Flat a, b, count triplets, sent as proof. */
+  bridges: number[];
+  startToken?: string;
+}
+
+export function loadPendingEndless(): PendingEndless[] {
+  const list = read<PendingEndless[]>(ENDLESS_PENDING_KEY);
+  return Array.isArray(list) ? list.filter((p) => Number.isInteger(p?.level) && Array.isArray(p.bridges)) : [];
+}
+
+export function addPendingEndless(result: PendingEndless): void {
+  const list = loadPendingEndless().filter((p) => p.level !== result.level);
+  list.push(result);
+  write(ENDLESS_PENDING_KEY, list.slice(-MAX_PENDING));
+}
+
+export function removePendingEndless(level: number): void {
+  const list = loadPendingEndless().filter((p) => p.level !== level);
+  if (list.length > 0) write(ENDLESS_PENDING_KEY, list);
+  else remove(ENDLESS_PENDING_KEY);
 }

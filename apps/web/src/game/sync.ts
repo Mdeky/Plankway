@@ -1,13 +1,24 @@
 import { dateForNumber, formatDate } from '@bridgle/core';
-import { deleteRemoteProfile, ensureProfile, forgetProfile, recoverProfile, submitResult, type RecoverOutcome } from './api.ts';
+import {
+  deleteRemoteProfile,
+  ensureProfile,
+  forgetProfile,
+  recoverProfile,
+  submitEndless,
+  submitResult,
+  type RecoverOutcome,
+  type SubmitOutcome,
+} from './api.ts';
 import { idbClear, idbGetAll, idbPut, STORES } from './idb.ts';
 import type { DailyRecord } from './stats.ts';
+import { loadPendingEndless, removePendingEndless } from './storage.ts';
 
 let running: Promise<void> | null = null;
 
 /**
- * Sends solved daily results that the server hasn't accepted yet. Results are always
- * stored locally first, so playing offline never breaks a streak; this catches up later.
+ * Sends solved daily results and endless levels that the server hasn't accepted yet.
+ * Results are always stored locally first, so playing offline never breaks a streak;
+ * this catches up later.
  */
 export function syncResults(): Promise<void> {
   running ??= doSync().finally(() => {
@@ -17,27 +28,33 @@ export function syncResults(): Promise<void> {
 }
 
 async function doSync(): Promise<void> {
-  const pending = (await idbGetAll<DailyRecord>(STORES.daily)).filter((r) => r.solved && !r.synced && r.bridges);
-  if (pending.length === 0) {
-    await ensureProfile();
-    return;
-  }
+  const daily = (await idbGetAll<DailyRecord>(STORES.daily)).filter((r) => r.solved && !r.synced && r.bridges);
+  const endless = loadPendingEndless().sort((a, b) => a.level - b.level);
   if (!(await ensureProfile())) return;
+  if (daily.length === 0 && endless.length === 0) return;
 
   let retried = false;
-  for (let i = 0; i < pending.length; i++) {
-    const r = pending[i]!;
-    const outcome = await submitResult(r.number, { timeMs: r.timeMs ?? 0, undos: r.undos, hints: r.hints, solution: r.bridges! });
-    if (outcome === 'offline') return;
-    if (outcome === 'no-profile') {
+  /** Sends one result; false means stop (offline, or no profile even after retrying). */
+  const send = async (submit: () => Promise<SubmitOutcome>, done: () => Promise<void> | void): Promise<boolean> => {
+    let outcome = await submit();
+    if (outcome === 'no-profile' && !retried) {
       // Cookie lost or profile deleted elsewhere: start a fresh profile once.
-      if (retried || !(await ensureProfile(true))) return;
       retried = true;
-      i--;
-      continue;
+      if (await ensureProfile(true)) outcome = await submit();
     }
+    if (outcome === 'offline' || outcome === 'no-profile') return false;
     // 'rejected' results are marked too, so they aren't retried forever.
-    await idbPut(STORES.daily, { ...r, synced: true }, r.number);
+    await done();
+    return true;
+  };
+
+  for (const r of daily) {
+    const body = { timeMs: r.timeMs ?? 0, undos: r.undos, hints: r.hints, solution: r.bridges!, startToken: r.startToken };
+    if (!(await send(() => submitResult(r.number, body), () => idbPut(STORES.daily, { ...r, synced: true }, r.number)))) return;
+  }
+  for (const r of endless) {
+    const body = { timeMs: r.timeMs, hints: r.hints, solution: r.bridges, startToken: r.startToken };
+    if (!(await send(() => submitEndless(r.level, body), () => removePendingEndless(r.level)))) return;
   }
 }
 

@@ -1,4 +1,4 @@
-export type GenerateJob = { kind: 'endless'; level: number; seed: string } | { kind: 'daily'; number: number };
+export type GenerateJob = { kind: 'endless'; level: number } | { kind: 'daily'; number: number };
 
 export type GenerateRequest = GenerateJob & { id: number };
 

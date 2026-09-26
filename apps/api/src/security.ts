@@ -18,6 +18,41 @@ export async function keyedHash(pepper: string, purpose: string, value: string):
   return toHex(await crypto.subtle.sign('HMAC', key, encoder.encode(`${purpose}:${value}`)));
 }
 
+export type PlayMode = 'daily' | 'endless';
+
+/**
+ * Signed proof of when the server first handed out a puzzle to a profile. Nothing is
+ * stored: the token carries its own start time and an HMAC over profile, puzzle and time.
+ */
+export async function signStart(pepper: string, profileId: string, mode: PlayMode, id: number, issuedAt: number): Promise<string> {
+  const sig = await keyedHash(pepper, 'start', `${profileId}|${mode}|${id}|${issuedAt}`);
+  return `v1.${mode}.${id}.${issuedAt}.${sig}`;
+}
+
+/** Start time from a valid token for this profile and puzzle, or null. */
+export async function verifyStart(
+  pepper: string,
+  profileId: string,
+  mode: PlayMode,
+  id: number,
+  token: unknown,
+): Promise<number | null> {
+  if (typeof token !== 'string' || token.length > 200) return null;
+  const parts = token.split('.');
+  if (parts.length !== 5 || parts[0] !== 'v1' || parts[1] !== mode || parts[2] !== String(id)) return null;
+  const issuedAt = Number(parts[3]);
+  if (!Number.isSafeInteger(issuedAt) || issuedAt <= 0) return null;
+  const expected = await signStart(pepper, profileId, mode, id, issuedAt);
+  return timingSafeEqual(expected, token) ? issuedAt : null;
+}
+
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
 /** 256-bit random session token. */
 export function newToken(): string {
   return toBase64Url(crypto.getRandomValues(new Uint8Array(32)));

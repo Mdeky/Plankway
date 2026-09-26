@@ -39,8 +39,9 @@ export class GeneratorClient {
     return { puzzle: parsePuzzle(response.puzzle), solution: parseSolution(response.solution) };
   }
 
-  async generate(level: number, seed: string): Promise<EndlessPuzzle> {
-    return { level, ...(await this.run({ kind: 'endless', level, seed })) };
+  /** The shared puzzle for this endless level, built locally (e.g. offline). */
+  async endless(level: number): Promise<EndlessPuzzle> {
+    return { level, ...(await this.run({ kind: 'endless', level })) };
   }
 
   daily(number: number): Promise<GeneratedGame> {
@@ -52,11 +53,4 @@ export class GeneratorClient {
     this.worker = null;
     this.pending.clear();
   }
-}
-
-/** Random per-device seed. Uses crypto, never Math.random(). */
-export function randomSeed(prefix: string): string {
-  const bytes = new Uint8Array(8);
-  crypto.getRandomValues(bytes);
-  return `${prefix}-${Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')}`;
 }

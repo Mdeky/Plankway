@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { dateForNumber, formatDate, generateDaily, serializePuzzle, serializeSolution } from '@bridgle/core';
+import { dateForNumber, formatDate, generateDaily, generateEndless, serializePuzzle, serializeSolution } from '@bridgle/core';
 import migration from '../migrations/0001_init.sql?raw';
+import migration2 from '../migrations/0002_endless_and_verified_times.sql?raw';
 import { COOKIE_NAME, createApp, RATE_LIMITS } from '../src/app.ts';
 import type { Env } from '../src/db.ts';
 import { normalizeRecoveryCode } from '../src/security.ts';
@@ -9,17 +10,23 @@ import { createTestDb } from './d1-sqlite.ts';
 // 2026-09-26 12:00 UTC: puzzle #2 is "today" in UTC; at UTC+14 it's already #3.
 const NOW = Date.UTC(2026, 8, 26, 12, 0);
 const puzzles = new Map([1, 2, 3, 4].map((n) => [n, generateDaily(n)]));
+const levels = new Map([1, 2, 3].map((n) => [n, generateEndless(n)]));
 
 let env: Env & { DB: ReturnType<typeof createTestDb> };
 let app: ReturnType<typeof createApp>;
 let clock = NOW;
 
 beforeEach(() => {
-  env = { DB: createTestDb([migration]), HASH_PEPPER: 'test-pepper' };
+  env = { DB: createTestDb([migration, migration2]), HASH_PEPPER: 'test-pepper' };
   for (const [n, g] of puzzles) {
     env.DB.raw
       .prepare('INSERT INTO puzzles (number, date, data, difficulty) VALUES (?, ?, ?, ?)')
       .run(n, formatDate(dateForNumber(n)), serializePuzzle(g.puzzle), g.report.score);
+  }
+  for (const [level, g] of levels) {
+    env.DB.raw
+      .prepare('INSERT INTO endless_puzzles (level, data, difficulty) VALUES (?, ?, ?)')
+      .run(level, serializePuzzle(g.puzzle), g.report.score);
   }
   clock = NOW;
   app = createApp({ now: () => clock });
@@ -45,6 +52,8 @@ function client(ip = '203.0.113.7') {
 }
 
 const solutionFor = (n: number) => serializeSolution(puzzles.get(n)!.solution);
+const levelSolution = (level: number) => serializeSolution(levels.get(level)!.solution);
+const endlessResult = (level: number, extra: Record<string, unknown> = {}) => ({ timeMs: 40_000, hints: 0, solution: levelSolution(level), ...extra });
 const result = (n: number, extra: Record<string, unknown> = {}) => ({ timeMs: 151_000, undos: 1, hints: 0, solution: solutionFor(n), ...extra });
 
 describe('GET /api/daily/:date', () => {
@@ -216,12 +225,120 @@ describe('recovery and deletion', () => {
     const c = client();
     await c.call('POST', '/api/profile');
     await c.call('POST', '/api/daily/2/result', result(2));
+    await c.call('POST', '/api/endless/1/result', endlessResult(1));
     const res = await c.call('DELETE', '/api/profile');
     expect(res.status).toBe(204);
     expect(res.setCookie).toContain('Max-Age=0');
     expect(env.DB.raw.prepare('SELECT COUNT(*) AS n FROM profiles').get()!.n).toBe(0);
     expect(env.DB.raw.prepare('SELECT COUNT(*) AS n FROM results').get()!.n).toBe(0);
+    expect(env.DB.raw.prepare('SELECT COUNT(*) AS n FROM endless_results').get()!.n).toBe(0);
     expect((await c.call('GET', '/api/profile/stats')).status).toBe(401);
+  });
+});
+
+describe('endless levels', () => {
+  it('serves the same published level to everyone, without its solution', async () => {
+    const a = await client().call('GET', '/api/endless/2');
+    const b = await client('192.0.2.1').call('GET', '/api/endless/2');
+    expect(a.status).toBe(200);
+    expect(a.json).toEqual(b.json);
+    expect(a.json.puzzle.id).toBe('endless-2');
+    expect(JSON.stringify(a.json)).not.toMatch(/solution/i);
+    expect(a.headers.get('Cache-Control')).toContain('max-age');
+  });
+
+  it('answers 404 for levels that are not generated or not valid', async () => {
+    expect((await client().call('GET', '/api/endless/4')).status).toBe(404);
+    expect((await client().call('GET', '/api/endless/0')).status).toBe(404);
+    expect((await client().call('GET', '/api/endless/abc')).status).toBe(404);
+  });
+
+  it('validates results against the stored level; the first one stands', async () => {
+    const c = client();
+    expect((await c.call('POST', '/api/endless/1/result', endlessResult(1))).status).toBe(401);
+    await c.call('POST', '/api/profile');
+    expect((await c.call('POST', '/api/endless/1/result', endlessResult(1, { solution: levelSolution(2) }))).json).toEqual({
+      error: 'invalid-solution',
+    });
+    const first = await c.call('POST', '/api/endless/1/result', endlessResult(1));
+    expect(first.json).toEqual({ accepted: true, duplicate: false, verified: false });
+    expect((await c.call('POST', '/api/endless/1/result', endlessResult(1, { timeMs: 1 }))).json.duplicate).toBe(true);
+    expect(env.DB.raw.prepare('SELECT time_ms FROM endless_results').get()!.time_ms).toBe(40_000);
+    expect((await c.call('POST', '/api/endless/4/result', endlessResult(1))).status).toBe(404);
+  });
+});
+
+describe('verified times', () => {
+  /** Fresh profile: fetch a start token, let `elapsed` ms pass, then submit. */
+  const play = async (mode: 'daily' | 'endless', id: number, elapsed: number, body: Record<string, unknown>, ip = '203.0.113.20') => {
+    const c = client(ip);
+    await c.call('POST', '/api/profile');
+    const start = await c.call('POST', `/api/${mode}/${id}/start`);
+    expect(start.status).toBe(200);
+    clock += elapsed;
+    const res = await c.call('POST', `/api/${mode}/${id}/result`, { ...body, startToken: start.json.token });
+    return { c, token: start.json.token as string, res };
+  };
+
+  it('verifies a time that fits inside what the server saw pass', async () => {
+    const { res } = await play('endless', 2, 60_000, endlessResult(2, { timeMs: 55_000 }));
+    expect(res.json.verified).toBe(true);
+    expect(env.DB.raw.prepare('SELECT verified FROM endless_results').get()!.verified).toBe(1);
+
+    const daily = await play('daily', 2, 200_000, result(2, { timeMs: 151_000 }), '203.0.113.21');
+    expect(daily.res.json.verified).toBe(true);
+    expect(env.DB.raw.prepare('SELECT verified FROM results').get()!.verified).toBe(1);
+  });
+
+  it('accepts but does not verify a time longer than the real elapsed time', async () => {
+    const { res } = await play('endless', 2, 10_000, endlessResult(2, { timeMs: 60_000 }));
+    expect(res.json).toMatchObject({ accepted: true, verified: false });
+  });
+
+  it('does not verify impossibly fast solves', async () => {
+    const { res } = await play('endless', 3, 60_000, endlessResult(3, { timeMs: 200 }));
+    expect(res.json.verified).toBe(false);
+  });
+
+  it('does not verify without a token', async () => {
+    const c = client();
+    await c.call('POST', '/api/profile');
+    clock += 60_000;
+    expect((await c.call('POST', '/api/endless/1/result', endlessResult(1))).json.verified).toBe(false);
+  });
+
+  it("does not verify someone else's token, a token for another level, or a tampered one", async () => {
+    const alice = client('192.0.2.70');
+    await alice.call('POST', '/api/profile');
+    const aliceToken = (await alice.call('POST', '/api/endless/2/start')).json.token as string;
+    const levelOne = (await alice.call('POST', '/api/endless/1/start')).json.token as string;
+    clock += 60_000;
+
+    const bob = client('192.0.2.71');
+    await bob.call('POST', '/api/profile');
+    expect((await bob.call('POST', '/api/endless/2/result', endlessResult(2, { startToken: aliceToken }))).json.verified).toBe(false);
+
+    const relabeled = levelOne.replace('.endless.1.', '.endless.3.');
+    expect((await alice.call('POST', '/api/endless/3/result', endlessResult(3, { startToken: relabeled }))).json.verified).toBe(false);
+
+    const parts = aliceToken.split('.');
+    parts[3] = String(Number(parts[3]) - 3_600_000);
+    expect((await alice.call('POST', '/api/endless/2/result', endlessResult(2, { startToken: parts.join('.') }))).json.verified).toBe(false);
+  });
+
+  it('needs a profile to start and only hands out tokens for playable puzzles', async () => {
+    expect((await client().call('POST', '/api/endless/1/start')).status).toBe(401);
+    const c = client();
+    await c.call('POST', '/api/profile');
+    expect((await c.call('POST', '/api/daily/4/start')).status).toBe(404);
+    expect((await c.call('POST', '/api/endless/0/start')).status).toBe(404);
+  });
+
+  it('accepts daily results without an undo count', async () => {
+    const c = client();
+    await c.call('POST', '/api/profile');
+    const { undos: _undos, ...withoutUndos } = result(2);
+    expect((await c.call('POST', '/api/daily/2/result', withoutUndos)).status).toBe(200);
   });
 });
 

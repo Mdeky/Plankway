@@ -9,7 +9,7 @@ import {
   serializeSolution,
   stateToSolution,
 } from '@bridgle/core';
-import { fetchDaily } from '../game/api.ts';
+import { fetchDaily, requestStartToken } from '../game/api.ts';
 import { t } from '../i18n.ts';
 import { loadDailyRecord, loadDailyStats, saveDailyRecord, todayNumber } from '../game/daily-store.ts';
 import { GeneratorClient, type GeneratedGame } from '../game/generator-client.ts';
@@ -53,6 +53,8 @@ export function DailyGame({ onExit }: { onExit(): void }) {
   const [showResult, setShowResult] = useState(false);
   const finished = useRef<object | null>(null);
   const record = useRef<DailyRecord | null>(null);
+  /** Server-signed start of this daily (undefined offline or before it arrives). */
+  const startToken = useRef<string | undefined>(undefined);
 
   useEffect(() => () => client.dispose(), []);
 
@@ -60,6 +62,7 @@ export function DailyGame({ onExit }: { onExit(): void }) {
     let cancelled = false;
     setGame(null);
     record.current = null;
+    startToken.current = undefined;
     setResult(null);
     setShowResult(false);
     (async () => {
@@ -76,6 +79,15 @@ export function DailyGame({ onExit }: { onExit(): void }) {
           setResult({ record: saved, stats: await loadDailyStats(number) });
           setShowResult(true);
           return;
+        }
+        // The first start counts: a token from an earlier session is kept.
+        startToken.current = saved?.startToken;
+        if (!startToken.current) {
+          void requestStartToken('daily', number).then((token) => {
+            if (cancelled || !token || startToken.current) return;
+            startToken.current = token;
+            if (record.current && !record.current.solved) record.current = { ...record.current, startToken: token };
+          });
         }
         if (saved?.progress) {
           const resumed = createSession(generated.puzzle, generated.solution, saved.progress.counts);
@@ -101,6 +113,7 @@ export function DailyGame({ onExit }: { onExit(): void }) {
       solved: false,
       undos: 0,
       hints: 0,
+      startToken: startToken.current,
     };
     const current = record.current;
     setGame((g) => g && { ...g, session: next, record: current });
@@ -116,6 +129,7 @@ export function DailyGame({ onExit }: { onExit(): void }) {
       hints: next.hints,
       progress: undefined,
       bridges: serializeSolution(countsToSolution(next.board, next.counts)),
+      startToken: current.startToken ?? startToken.current,
       synced: false,
     };
     record.current = solved;
@@ -131,6 +145,7 @@ export function DailyGame({ onExit }: { onExit(): void }) {
     if (!current || current.solved || s.solved) return;
     void saveDailyRecord({
       ...current,
+      startToken: current.startToken ?? startToken.current,
       undos: s.undos,
       hints: s.hints,
       progress: { counts: Array.from(s.counts), elapsedMs: Math.round(elapsedMs) },

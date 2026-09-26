@@ -15,6 +15,8 @@ export interface DailyRecord {
   progress?: { counts: number[]; elapsedMs: number };
   /** The player's final bridges as flat a, b, count triplets; sent to the server as proof. */
   bridges?: number[];
+  /** Server-signed start of this puzzle; lets the server verify the time. */
+  startToken?: string;
   /** True once the server has accepted this result. */
   synced?: boolean;
 }

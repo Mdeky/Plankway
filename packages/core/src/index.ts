@@ -13,3 +13,4 @@ export * from './solver/logical.ts';
 export * from './solver/backtrack.ts';
 export * from './daily.ts';
 export * from './stats.ts';
+export * from './endless.ts';

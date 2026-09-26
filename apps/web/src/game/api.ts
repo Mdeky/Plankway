@@ -75,6 +75,27 @@ export async function fetchDaily(date: string): Promise<{ number: number; puzzle
   }
 }
 
+/** A published endless level (the same for everyone), or null when offline / not published. */
+export async function fetchEndless(level: number): Promise<Puzzle | null> {
+  const { status, data } = await request('GET', `/endless/${level}`);
+  if (status !== 200 || !data) return null;
+  try {
+    return parsePuzzle(data.puzzle as SerializedPuzzle);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Asks the server to sign the moment this puzzle started, so the time can be verified
+ * later. Undefined when offline; the result then still counts, just unverified.
+ */
+export async function requestStartToken(mode: 'daily' | 'endless', id: number): Promise<string | undefined> {
+  if (!(await ensureProfile())) return undefined;
+  const { status, data } = await request('POST', `/${mode}/${id}/start`);
+  return status === 200 && typeof data?.token === 'string' ? data.token : undefined;
+}
+
 /** Makes sure this device has an anonymous profile (cookie). Returns null when offline. */
 export async function ensureProfile(force = false): Promise<ProfileInfo | null> {
   const known = loadProfileInfo();
@@ -91,15 +112,25 @@ export async function ensureProfile(force = false): Promise<ProfileInfo | null> 
 
 export type SubmitOutcome = 'ok' | 'offline' | 'rejected' | 'no-profile';
 
-export async function submitResult(
-  number: number,
-  result: { timeMs: number; undos: number; hints: number; solution: number[] },
-): Promise<SubmitOutcome> {
-  const { status } = await request('POST', `/daily/${number}/result`, result);
+function outcome(status: number): SubmitOutcome {
   if (status === 200) return 'ok';
   if (status === 401) return 'no-profile';
   if (status === 400 || status === 404) return 'rejected';
   return 'offline';
+}
+
+export async function submitResult(
+  number: number,
+  result: { timeMs: number; undos: number; hints: number; solution: number[]; startToken?: string },
+): Promise<SubmitOutcome> {
+  return outcome((await request('POST', `/daily/${number}/result`, result)).status);
+}
+
+export async function submitEndless(
+  level: number,
+  result: { timeMs: number; hints: number; solution: number[]; startToken?: string },
+): Promise<SubmitOutcome> {
+  return outcome((await request('POST', `/endless/${level}/result`, result)).status);
 }
 
 export type RecoverOutcome = { ok: true; results: RemoteResult[] } | { ok: false; error: 'unknown-code' | 'invalid-code' | 'rate-limited' | 'offline' };

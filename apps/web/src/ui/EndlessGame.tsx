@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import type { Solution } from '@bridgle/core';
+import { buildBoard, countsToSolution, endlessSeed, findSolutions, serializeSolution, stateToSolution, type Solution } from '@bridgle/core';
 import { t } from '../i18n.ts';
-import { GeneratorClient, randomSeed, type EndlessPuzzle } from '../game/generator-client.ts';
+import { fetchEndless, requestStartToken } from '../game/api.ts';
+import { GeneratorClient, type EndlessPuzzle } from '../game/generator-client.ts';
 import { createSession, type Session } from '../game/session.ts';
+import { syncResults } from '../game/sync.ts';
 import {
+  addPendingEndless,
   clearEndlessGame,
   loadEndlessGame,
   loadEndlessProgress,
@@ -24,6 +27,24 @@ interface Loaded {
   initialMs: number;
 }
 
+/**
+ * Every level is the same puzzle for everyone. The server's copy is canonical; offline the
+ * same puzzle is generated locally from the level's seed. The client never receives a
+ * solution, so it solves the puzzle itself for hints.
+ */
+async function loadLevel(client: GeneratorClient, level: number): Promise<EndlessPuzzle> {
+  const remote = await fetchEndless(level);
+  if (remote) {
+    const board = buildBoard(remote);
+    const [solved] = findSolutions(board, 1);
+    if (solved) return { level, puzzle: remote, solution: stateToSolution(board, solved) };
+  }
+  return client.endless(level);
+}
+
+/** Games saved before levels were shared used a random puzzle; those can't be submitted. */
+const isShared = (level: number, s: Session) => s.puzzle.id === endlessSeed(level);
+
 interface Win {
   level: number;
   timeMs: number;
@@ -43,11 +64,20 @@ export function EndlessGame({ onExit }: { onExit(): void }) {
   const [breakBefore, setBreakBefore] = useState<number | null>(null);
   /** Puzzle whose win was already handled (moves can arrive faster than renders). */
   const finished = useRef<object | null>(null);
+  /** Server-signed start of the current level (undefined offline). */
+  const startToken = useRef<string | undefined>(undefined);
 
   const prefetch = (level: number) => {
-    const promise = client.generate(level, randomSeed(`endless-${level}`));
+    const promise = loadLevel(client, level);
     promise.catch(() => undefined);
     nextPuzzle.current = promise;
+  };
+
+  const requestToken = (level: number) => {
+    startToken.current = undefined;
+    void requestStartToken('endless', level).then((token) => {
+      if (token && startToken.current === undefined) startToken.current = token;
+    });
   };
 
   const start = async (level: number) => {
@@ -57,7 +87,8 @@ export function EndlessGame({ onExit }: { onExit(): void }) {
       const pending = nextPuzzle.current;
       nextPuzzle.current = null;
       let next = pending ? await pending.catch(() => null) : null;
-      if (!next || next.level !== level) next = await client.generate(level, randomSeed(`endless-${level}`));
+      if (!next || next.level !== level) next = await loadLevel(client, level);
+      requestToken(level);
       setGame({ level, session: createSession(next.puzzle, next.solution), solution: next.solution, initialMs: 0 });
       prefetch(level + 1);
     } catch (err) {
@@ -70,6 +101,8 @@ export function EndlessGame({ onExit }: { onExit(): void }) {
     const saved = loadEndlessGame();
     if (saved && saved.level === progress.level) {
       const s = createSession(saved.puzzle, saved.solution, saved.counts);
+      if (saved.startToken) startToken.current = saved.startToken;
+      else if (isShared(saved.level, s)) requestToken(saved.level);
       setGame({
         level: saved.level,
         session: { ...s, undos: saved.undos, hints: saved.hints },
@@ -97,6 +130,16 @@ export function EndlessGame({ onExit }: { onExit(): void }) {
     };
     saveEndlessProgress(updated);
     clearEndlessGame();
+    if (isShared(game.level, next)) {
+      addPendingEndless({
+        level: game.level,
+        timeMs: Math.round(timeMs),
+        hints: next.hints,
+        bridges: serializeSolution(countsToSolution(next.board, next.counts)),
+        startToken: startToken.current,
+      });
+      void syncResults();
+    }
     setProgress(updated);
     setWin({ level: game.level, timeMs, undos: next.undos, hints: next.hints, record });
   };
@@ -111,6 +154,7 @@ export function EndlessGame({ onExit }: { onExit(): void }) {
       elapsedMs,
       undos: s.undos,
       hints: s.hints,
+      startToken: startToken.current,
     });
   };
 

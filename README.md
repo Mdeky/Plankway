@@ -28,7 +28,7 @@ Full stack (no Cloudflare account needed, everything runs locally):
 
 ```bash
 cp apps/api/.dev.vars.example apps/api/.dev.vars   # once: local secret
-pnpm db:setup:local    # once: D1 migrations + the next 14 days of puzzles
+pnpm db:setup:local    # once: D1 migrations, the next 14 days of puzzles and 1000 endless levels
 pnpm dev:api           # Worker on http://localhost:8787 (wrangler, local D1)
 pnpm dev:web           # app on http://localhost:5173, /api is proxied to the Worker
 ```
@@ -144,14 +144,22 @@ production the Worker is routed on the same domain as the site, so no CORS is ne
 | `DELETE /api/profile` | Deletes the profile and all its results (GDPR). |
 
 - Tokens, recovery codes and IPs are only stored as HMAC-SHA256 with the `HASH_PEPPER` secret.
-- Rate limits per hour: profile creation 10/IP, recovery 10/IP, results 60/profile.
+- Rate limits per hour: profile creation 10/IP, recovery 10/IP, daily results 60/profile, endless results
+  240/profile, start tokens 300/profile.
+- Verified times: `POST /api/{daily|endless}/:id/start` returns a start token (an HMAC over profile, puzzle
+  and server time; nothing is stored). A result sent with that token is `verified` when its time fits inside
+  the time the server saw pass (plus 5 s) and is at least 150 ms per bridge. Unverified results still count
+  for streaks and progress; leaderboards will only use verified ones.
 - Tests run the real app against SQLite (`node:sqlite`) with the same migrations.
 
-### Daily puzzles
+### Daily puzzles and endless levels
 
 `node scripts/generate-daily.ts --apply local|remote` fills D1 up to 14 days ahead (idempotent).
-`.github/workflows/daily.yml` runs it every night; if a run fails, the buffer covers it.
-Without `--apply` it only writes SQL to `scripts/out/`.
+`node scripts/generate-endless.ts --apply local|remote` keeps at least 1000 endless levels in D1, and always
+500 past the furthest level anyone has solved. Every level has a fixed seed (`endless-<level>`), so all
+players get the same puzzle; offline, the app builds the same level locally from that seed.
+`.github/workflows/daily.yml` runs both every night; if a run fails, the buffer covers it.
+Without `--apply` they only write SQL to `scripts/out/`.
 
 ### Hosting & deploying
 
@@ -162,7 +170,8 @@ static asset requests are free and don't count towards the Workers request quota
 - D1 database `plankway` in Western Europe (`apps/api/wrangler.toml`); secret `HASH_PEPPER` set with
   `wrangler secret put HASH_PEPPER` (never in git).
 - Deploy site + API: `pnpm run deploy` (builds the web app, then `wrangler deploy`).
-- Daily puzzles: `node scripts/generate-daily.ts --apply remote` — also run nightly by GitHub Actions,
+- Daily puzzles and endless levels: `node scripts/generate-daily.ts --apply remote` and
+  `node scripts/generate-endless.ts --apply remote` (both also apply D1 migrations) — also run nightly by GitHub Actions,
   which needs the repository secrets `CLOUDFLARE_API_TOKEN` (D1 edit) and `CLOUDFLARE_ACCOUNT_ID`.
 - `apps/web/public/_headers`: long cache for hashed assets, no cache for `sw.js`, basic security headers.
 

@@ -11,9 +11,10 @@ import {
   PuzzleFormatError,
   validateSolution,
   type CalendarDate,
+  type Solution,
 } from '@bridgle/core';
 import type { Env } from './db.ts';
-import { keyedHash, newRecoveryCode, newToken, normalizeRecoveryCode } from './security.ts';
+import { keyedHash, newRecoveryCode, newToken, normalizeRecoveryCode, signStart, verifyStart, type PlayMode } from './security.ts';
 
 export const COOKIE_NAME = 'plankway_token';
 const COOKIE_MAX_AGE = 400 * 24 * 3600; // the longest browsers accept
@@ -23,10 +24,20 @@ export const RATE_LIMITS = {
   createProfile: 10,
   recover: 10,
   submitResult: 60,
+  submitEndless: 240,
+  start: 300,
 } as const;
 
 const MAX_TIME_MS = 7 * 24 * 3600 * 1000;
 const MAX_COUNTER = 100_000;
+/** Highest endless level the API accepts (far beyond anything that is generated). */
+const MAX_LEVEL = 100_000;
+
+/** A time only counts as verified when it fits inside what the server saw pass. */
+const START_SLACK_MS = 5_000;
+const START_TOKEN_MAX_AGE_MS = 30 * 24 * 3600 * 1000;
+/** Nobody places a bridge faster than this, not even with perfect knowledge. */
+const MIN_MS_PER_BRIDGE = 150;
 
 export interface AppOptions {
   /** Injectable clock for tests. */
@@ -111,6 +122,52 @@ export function createApp(options: AppOptions = {}) {
     return fail(400, 'invalid-json');
   };
 
+  const readCounters = (body: Record<string, unknown>) => {
+    const { timeMs, hints } = body;
+    const isCount = (v: unknown): v is number => Number.isInteger(v) && (v as number) >= 0 && (v as number) <= MAX_COUNTER;
+    if (!Number.isInteger(timeMs) || (timeMs as number) < 0 || (timeMs as number) > MAX_TIME_MS) fail(400, 'invalid-time');
+    if (!isCount(hints)) fail(400, 'invalid-counters');
+    return { timeMs: timeMs as number, hints: hints as number };
+  };
+
+  /** Parses and checks a submitted solution against the stored puzzle. */
+  const checkSolution = (data: string, submitted: unknown): Solution => {
+    try {
+      const solution = parseSolution(submitted);
+      if (validateSolution(parsePuzzle(data), solution).valid) return solution;
+    } catch (err) {
+      if (!(err instanceof PuzzleFormatError)) throw err;
+    }
+    return fail(400, 'invalid-solution');
+  };
+
+  /**
+   * Whether a reported time is backed by a start token: signed for this profile and
+   * puzzle, not older than the reported time allows, and not impossibly fast.
+   */
+  const isVerified = async (
+    c: Context<AppEnv>,
+    profileId: string,
+    mode: PlayMode,
+    id: number,
+    token: unknown,
+    timeMs: number,
+    solution: Solution,
+  ): Promise<boolean> => {
+    const issuedAt = await verifyStart(pepper(c), profileId, mode, id, token);
+    if (issuedAt === null) return false;
+    const elapsed = now() - issuedAt;
+    if (elapsed < 0 || elapsed > START_TOKEN_MAX_AGE_MS) return false;
+    const bridges = solution.reduce((sum, b) => sum + b.count, 0);
+    return timeMs <= elapsed + START_SLACK_MS && timeMs >= bridges * MIN_MS_PER_BRIDGE;
+  };
+
+  const startToken = async (c: Context<AppEnv>, mode: PlayMode, id: number) => {
+    const profileId = await requireProfile(c);
+    await rateLimit(c, 'start', profileId);
+    return c.json({ token: await signStart(pepper(c), profileId, mode, id, now()) });
+  };
+
   const profileResults = async (c: Context<AppEnv>, profileId: string) => {
     const { results } = await c.env.DB.prepare(
       'SELECT puzzle_number, time_ms, undos, hints, solved_at FROM results WHERE profile_id = ? ORDER BY puzzle_number',
@@ -151,31 +208,76 @@ export function createApp(options: AppOptions = {}) {
     if (!Number.isInteger(number) || number < 1 || number > latestNumber()) fail(404, 'not-available');
 
     const body = await readJson(c);
-    const { timeMs, undos, hints } = body;
-    const isCount = (v: unknown): v is number => Number.isInteger(v) && (v as number) >= 0 && (v as number) <= MAX_COUNTER;
-    if (!Number.isInteger(timeMs) || (timeMs as number) < 0 || (timeMs as number) > MAX_TIME_MS) fail(400, 'invalid-time');
-    if (!isCount(undos) || !isCount(hints)) fail(400, 'invalid-counters');
+    const { timeMs, hints } = readCounters(body);
+    // Undos can only come from Ctrl+Z now; clients that stop sending them count as 0.
+    const undos = body.undos === undefined ? 0 : body.undos;
+    if (!Number.isInteger(undos) || (undos as number) < 0 || (undos as number) > MAX_COUNTER) fail(400, 'invalid-counters');
 
     const row = await c.env.DB.prepare('SELECT data FROM puzzles WHERE number = ?').bind(number).first<{ data: string }>();
     if (!row) fail(404, 'not-found');
-
-    let valid = false;
-    try {
-      valid = validateSolution(parsePuzzle(row.data), parseSolution(body.solution)).valid;
-    } catch (err) {
-      if (!(err instanceof PuzzleFormatError)) throw err;
-    }
-    if (!valid) fail(400, 'invalid-solution');
+    const solution = checkSolution(row.data, body.solution);
+    const verified = await isVerified(c, profileId, 'daily', number, body.startToken, timeMs, solution);
 
     const insert = await c.env.DB.prepare(
-      `INSERT OR IGNORE INTO results (profile_id, puzzle_number, time_ms, undos, hints, solved_at)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+      `INSERT OR IGNORE INTO results (profile_id, puzzle_number, time_ms, undos, hints, verified, solved_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
     )
-      .bind(profileId, number, timeMs, undos, hints, now())
+      .bind(profileId, number, timeMs, undos, hints, verified ? 1 : 0, now())
       .run();
 
     const today = c.req.query('today');
-    return c.json({ accepted: true, duplicate: insert.meta.changes === 0, ...(await statsFor(c, profileId, today ? Number(today) : number)) });
+    return c.json({
+      accepted: true,
+      duplicate: insert.meta.changes === 0,
+      verified,
+      ...(await statsFor(c, profileId, today ? Number(today) : number)),
+    });
+  });
+
+  app.post('/daily/:number/start', async (c) => {
+    const number = Number(c.req.param('number'));
+    if (!Number.isInteger(number) || number < 1 || number > latestNumber()) fail(404, 'not-available');
+    return startToken(c, 'daily', number);
+  });
+
+  // ── Endless levels ────────────────────────────────────────────────────────
+
+  const readLevel = (c: Context<AppEnv>): number => {
+    const level = Number(c.req.param('level'));
+    if (!Number.isInteger(level) || level < 1 || level > MAX_LEVEL) fail(404, 'not-available');
+    return level;
+  };
+
+  app.get('/endless/:level', async (c) => {
+    const level = readLevel(c);
+    const row = await c.env.DB.prepare('SELECT data FROM endless_puzzles WHERE level = ?').bind(level).first<{ data: string }>();
+    if (!row) fail(404, 'not-found');
+    // A level never changes once it is published.
+    c.header('Cache-Control', 'public, max-age=86400');
+    return c.json({ level, puzzle: JSON.parse(row.data) });
+  });
+
+  app.post('/endless/:level/start', async (c) => startToken(c, 'endless', readLevel(c)));
+
+  app.post('/endless/:level/result', async (c) => {
+    const profileId = await requireProfile(c);
+    await rateLimit(c, 'submitEndless', profileId);
+    const level = readLevel(c);
+    const body = await readJson(c);
+    const { timeMs, hints } = readCounters(body);
+
+    const row = await c.env.DB.prepare('SELECT data FROM endless_puzzles WHERE level = ?').bind(level).first<{ data: string }>();
+    if (!row) fail(404, 'not-found');
+    const solution = checkSolution(row.data, body.solution);
+    const verified = await isVerified(c, profileId, 'endless', level, body.startToken, timeMs, solution);
+
+    const insert = await c.env.DB.prepare(
+      `INSERT OR IGNORE INTO endless_results (profile_id, level, time_ms, hints, verified, solved_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    )
+      .bind(profileId, level, timeMs, hints, verified ? 1 : 0, now())
+      .run();
+    return c.json({ accepted: true, duplicate: insert.meta.changes === 0, verified });
   });
 
   // ── Profiles ──────────────────────────────────────────────────────────────
@@ -237,7 +339,12 @@ export function createApp(options: AppOptions = {}) {
     const profileId = await requireProfile(c);
     await c.env.DB.batch([
       c.env.DB.prepare('DELETE FROM results WHERE profile_id = ?').bind(profileId),
-      c.env.DB.prepare('DELETE FROM rate_limits WHERE key = ?').bind(`submitResult:${profileId}`),
+      c.env.DB.prepare('DELETE FROM endless_results WHERE profile_id = ?').bind(profileId),
+      c.env.DB.prepare('DELETE FROM rate_limits WHERE key IN (?, ?, ?)').bind(
+        `submitResult:${profileId}`,
+        `submitEndless:${profileId}`,
+        `start:${profileId}`,
+      ),
       c.env.DB.prepare('DELETE FROM profiles WHERE id = ?').bind(profileId),
     ]);
     deleteCookie(c, COOKIE_NAME, { path: '/api', secure: true });
