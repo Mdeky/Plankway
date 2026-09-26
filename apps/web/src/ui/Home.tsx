@@ -53,7 +53,7 @@ export function Home({ onDaily, onEndless, onLeaderboard, onHowTo, onSettings, p
             <span>{t('menu.daily', { number })}</span>
             <small>{t(`menu.daily.${daily}`, { streak: stats?.currentStreak ?? 0 })}</small>
           </button>
-          <button class="btn big" onClick={onEndless}>
+          <button class="btn big sea" onClick={onEndless}>
             <span>{t('menu.endless')}</span>
             <small>{t('menu.endless.sub', { level: progress.level, best: progress.best })}</small>
           </button>

@@ -19,7 +19,7 @@ export function applyTheme(pref: ThemePref = getThemePref()): void {
   if (pref === 'system') root.removeAttribute('data-theme');
   else root.setAttribute('data-theme', pref);
   const dark = pref === 'dark' || (pref === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
-  document.querySelector('meta[name="theme-color"]:not([media])')?.setAttribute('content', dark ? '#0f1c33' : '#7fd1d6');
+  document.querySelector('meta[name="theme-color"]:not([media])')?.setAttribute('content', dark ? '#0d1b2a' : '#fcf3de');
   window.dispatchEvent(new Event(THEME_EVENT));
 }
 

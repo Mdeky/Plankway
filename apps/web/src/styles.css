@@ -1,17 +1,23 @@
 :root {
   color-scheme: light;
   --night: 0;
-  --bg: #e9f6f5;
+  /* UI palette "Sunny": sand and cream, the logo's yellow for the main action, sea
+     turquoise for the second one, wood-brown text. */
+  --bg: #fcf3de;
   /* Darkens the home background picture at night. */
   --backdrop-dim: 0;
-  --surface: #ffffff;
-  --text: #1d3b45;
-  --muted: #4f6a72;
-  --accent: #b4561b;
-  --accent-text: #ffffff;
+  --surface: #fff8e7;
+  --text: #4a2d12;
+  --muted: #7a5a38;
+  --accent: #ffc83d;
+  --accent-text: #5a3410;
+  --accent-edge: #c98a1b;
+  --sea: #16a3b8;
+  --sea-text: #ffffff;
+  --sea-edge: #0e6f80;
   --btn: #ffffff;
-  --btn-border: #c7e1e0;
-  --shadow: 0 2px 0 rgb(29 59 69 / 0.12);
+  --btn-border: #e9cf97;
+  --shadow: 0 3px 0 #e2c58c;
 
   /* Sea */
   --water: #8adbdf;
@@ -47,7 +53,7 @@
   --rock-light: #d7dde2;
 
   /* Feedback & celebration */
-  --focus: #1d5fd1;
+  --focus: #0e6f80;
   --hint: #ffe066;
   --mistake: #d93b20;
   --sail: #ffffff;
@@ -66,14 +72,21 @@
   :root:not([data-theme='light']) {
     color-scheme: dark;
     --night: 1;
-    --bg: #0b1426;
-  --backdrop-dim: 0.35;
-    --surface: #15233d;
-    --text: #e6eefb;
-    --muted: #a9b8cf;
-    --btn: #1b2b49;
-    --btn-border: #2b3f63;
-    --shadow: 0 2px 0 rgb(0 0 0 / 0.35);
+    /* Night: deep sea, moonlit cream text; yellow and turquoise glow like lanterns. */
+    --bg: #0d1b2a;
+    --backdrop-dim: 0.35;
+    --surface: #13263a;
+    --text: #fff3d6;
+    --muted: #cbb896;
+    --accent: #ffc83d;
+    --accent-text: #4a2d12;
+    --accent-edge: #a8740f;
+    --sea: #139aae;
+    --sea-text: #ffffff;
+    --sea-edge: #0a5d69;
+    --btn: #1b3450;
+    --btn-border: #2e4d70;
+    --shadow: 0 3px 0 rgb(0 0 0 / 0.4);
     --water: #1a3766;
     --water-deep: #0b1b38;
     --wave: #9fc2ff;
@@ -101,7 +114,7 @@
     --rock: #6f7b88;
     --rock-dark: #3c4550;
     --rock-light: #a9b5c2;
-    --focus: #8ab4ff;
+    --focus: #7fd8e6;
     --hint: #ffd84d;
     --mistake: #ff6b4f;
     --sail: #e9eef8;
@@ -115,14 +128,21 @@
 :root[data-theme='dark'] {
   color-scheme: dark;
   --night: 1;
-  --bg: #0b1426;
+  /* Night: deep sea, moonlit cream text; yellow and turquoise glow like lanterns. */
+  --bg: #0d1b2a;
   --backdrop-dim: 0.35;
-  --surface: #15233d;
-  --text: #e6eefb;
-  --muted: #a9b8cf;
-  --btn: #1b2b49;
-  --btn-border: #2b3f63;
-  --shadow: 0 2px 0 rgb(0 0 0 / 0.35);
+  --surface: #13263a;
+  --text: #fff3d6;
+  --muted: #cbb896;
+  --accent: #ffc83d;
+  --accent-text: #4a2d12;
+  --accent-edge: #a8740f;
+  --sea: #139aae;
+  --sea-text: #ffffff;
+  --sea-edge: #0a5d69;
+  --btn: #1b3450;
+  --btn-border: #2e4d70;
+  --shadow: 0 3px 0 rgb(0 0 0 / 0.4);
   --water: #1a3766;
   --water-deep: #0b1b38;
   --wave: #9fc2ff;
@@ -150,7 +170,7 @@
   --rock: #6f7b88;
   --rock-dark: #3c4550;
   --rock-light: #a9b5c2;
-  --focus: #8ab4ff;
+  --focus: #7fd8e6;
   --hint: #ffd84d;
   --mistake: #ff6b4f;
   --sail: #e9eef8;
@@ -234,8 +254,9 @@ h2 {
 .home-card,
 .home .site-footer {
   width: min(100%, 360px);
+  border: 2px solid var(--btn-border);
   border-radius: var(--radius);
-  background: color-mix(in srgb, var(--surface) 84%, transparent);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   box-shadow: 0 8px 30px rgb(0 0 0 / 0.18);
@@ -310,6 +331,13 @@ h2 {
   color: var(--accent-text);
 }
 
+/* Second main action (Endless): sea turquoise. */
+.btn.sea {
+  background: var(--sea);
+  border-color: var(--sea);
+  color: var(--sea-text);
+}
+
 .btn.big {
   flex-direction: column;
   gap: 2px;
@@ -372,7 +400,8 @@ h2 {
   display: grid;
   place-items: center;
   aspect-ratio: 1;
-  color: var(--accent-text);
+  color: #fff;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.35);
   font-weight: 600;
 }
 
@@ -508,7 +537,7 @@ h2 {
 }
 
 .tutorial-dots button.active::before {
-  background: var(--accent);
+  background: var(--accent-edge);
   transform: scale(1.35);
 }
 
@@ -549,8 +578,12 @@ h2 {
 }
 
 .badge {
-  margin: 0 0 12px;
-  color: var(--accent);
+  width: fit-content;
+  margin: 0 auto 12px;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-text);
   font-weight: 700;
   text-align: center;
 }
@@ -827,7 +860,7 @@ a.btn {
   width: 20px;
   height: 20px;
   margin: 0;
-  accent-color: var(--accent);
+  accent-color: var(--sea);
 }
 
 .btn,
@@ -838,8 +871,13 @@ a.btn {
     border-color 0.15s ease;
 }
 
+/* Game-style buttons: a darker bottom edge that presses in. */
 .btn.primary {
-  box-shadow: 0 3px 0 rgb(0 0 0 / 0.18);
+  box-shadow: 0 4px 0 var(--accent-edge);
+}
+
+.btn.sea {
+  box-shadow: 0 4px 0 var(--sea-edge);
 }
 
 /* ── PWA ──────────────────────────────────────────── */
@@ -940,12 +978,14 @@ a.btn {
   gap: 10px;
   min-height: 44px;
   padding: 6px 12px;
+  border: 1.5px solid var(--btn-border);
   border-radius: 12px;
   background: var(--surface);
 }
 
 .board li.you {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--accent-edge);
+  background: color-mix(in srgb, var(--accent) 22%, var(--surface));
   font-weight: 700;
 }
 
