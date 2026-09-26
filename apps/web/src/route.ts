@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'preact/hooks';
 
 /** Every screen has its own URL, so the phone's back button and deep links work. */
-export type Route = 'home' | 'daily' | 'endless' | 'how-to-play' | 'about' | 'privacy' | 'cookies' | 'terms';
+export type Route = 'home' | 'daily' | 'endless' | 'leaderboard' | 'how-to-play' | 'about' | 'privacy' | 'cookies' | 'terms';
 
 export const PATHS: Record<Route, string> = {
   home: '/',
   daily: '/daily',
   endless: '/endless',
+  leaderboard: '/leaderboard',
   'how-to-play': '/how-to-play',
   about: '/about',
   privacy: '/privacy',

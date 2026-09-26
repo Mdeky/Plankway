@@ -3,6 +3,7 @@ import { dateForNumber, formatDate, generateDaily, generateEndless, serializePuz
 import migration from '../migrations/0001_init.sql?raw';
 import migration2 from '../migrations/0002_endless_and_verified_times.sql?raw';
 import migration3 from '../migrations/0003_accounts_and_sessions.sql?raw';
+import migration4 from '../migrations/0004_leaderboards.sql?raw';
 import { COOKIE_NAME, createApp, OAUTH_COOKIE, RATE_LIMITS } from '../src/app.ts';
 import type { Env } from '../src/db.ts';
 import { normalizeRecoveryCode } from '../src/security.ts';
@@ -18,7 +19,7 @@ let app: ReturnType<typeof createApp>;
 let clock = NOW;
 
 beforeEach(() => {
-  env = { DB: createTestDb([migration, migration2, migration3]), HASH_PEPPER: 'test-pepper' };
+  env = { DB: createTestDb([migration, migration2, migration3, migration4]), HASH_PEPPER: 'test-pepper' };
   for (const [n, g] of puzzles) {
     env.DB.raw
       .prepare('INSERT INTO puzzles (number, date, data, difficulty) VALUES (?, ?, ?, ?)')
@@ -569,6 +570,142 @@ describe('display name and country', () => {
     expect((await put({ country: 'XX' })).json).toEqual({ error: 'invalid-country' });
     expect((await put({ country: 'be' })).status).toBe(400);
     expect((await c.call('GET', '/api/profile/me')).json.account).toMatchObject({ displayName: 'Grape Catering', country: 'BE' });
+  });
+});
+
+describe('leaderboards', () => {
+  let ipCounter = 0;
+  /** A signed-in player with a name (and country) who can appear on boards. */
+  const player = async (name: string | null, country: string | null = null) => {
+    withGoogle();
+    google.sub = `google-${name ?? 'anon'}-${++ipCounter}`;
+    const c = client(`198.18.0.${ipCounter}`);
+    if (name === null) {
+      await c.call('POST', '/api/profile');
+      return c;
+    }
+    await signIn(c);
+    await c.call('PUT', '/api/profile/account', { displayName: name, country });
+    return c;
+  };
+  /** Starts (for a verified time unless `verified` is false), waits, then submits. */
+  const solve = async (
+    c: ReturnType<typeof client>,
+    mode: 'daily' | 'endless',
+    id: number,
+    timeMs: number,
+    opts: { verified?: boolean; hints?: number } = {},
+  ) => {
+    const token = opts.verified === false ? undefined : (await c.call('POST', `/api/${mode}/${id}/start`)).json.token;
+    clock += timeMs + 1_000;
+    const body = mode === 'daily' ? result(id, { timeMs, hints: opts.hints ?? 0 }) : endlessResult(id, { timeMs, hints: opts.hints ?? 0 });
+    const res = await c.call('POST', `/api/${mode}/${id}/result`, { ...body, startToken: token });
+    expect(res.status).toBe(200);
+  };
+  const names = (board: { entries: { name: string }[] }) => board.entries.map((e) => e.name);
+
+  it('daily: fastest verified times without hints, named players only, world or one country', async () => {
+    const anna = await player('Anna', 'BE');
+    const bram = await player('Bram', 'NL');
+    const cheat = await player('Cas', 'BE');
+    const helped = await player('Dirk', 'BE');
+    const anon = await player(null);
+    await solve(anna, 'daily', 2, 60_000);
+    await solve(bram, 'daily', 2, 30_000);
+    await solve(cheat, 'daily', 2, 10_000, { verified: false });
+    await solve(helped, 'daily', 2, 20_000, { hints: 1 });
+    await solve(anon, 'daily', 2, 5_000);
+
+    const world = (await anna.call('GET', '/api/leaderboard/daily/2')).json;
+    expect(names(world)).toEqual(['Bram', 'Anna']);
+    expect(world.entries[0]).toEqual({ rank: 1, name: 'Bram', country: 'NL', value: 30_000 });
+    expect(world.entries[1].you).toBe(true);
+    expect(world.you).toEqual({ rank: 2, value: 60_000 });
+    expect(JSON.stringify(world)).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-/); // no profile ids
+
+    const belgium = (await anna.call('GET', '/api/leaderboard/daily/2?country=BE')).json;
+    expect(names(belgium)).toEqual(['Anna']);
+    expect(belgium.you).toEqual({ rank: 1, value: 60_000 });
+
+    expect((await cheat.call('GET', '/api/leaderboard/daily/2')).json.you).toEqual({ rank: null, reason: 'unverified' });
+    expect((await helped.call('GET', '/api/leaderboard/daily/2')).json.you).toEqual({ rank: null, reason: 'hints' });
+    expect((await anon.call('GET', '/api/leaderboard/daily/2')).json.you).toEqual({ rank: null, reason: 'no-name' });
+    expect((await anna.call('GET', '/api/leaderboard/daily/1')).json.you).toEqual({ rank: null, reason: 'not-played' });
+    expect((await client().call('GET', '/api/leaderboard/daily/2')).json.you).toBeNull();
+  });
+
+  it('checks its parameters', async () => {
+    expect((await client().call('GET', '/api/leaderboard/daily/2?country=XX')).status).toBe(400);
+    expect((await client().call('GET', '/api/leaderboard/daily/4')).status).toBe(404);
+    expect((await client().call('GET', '/api/leaderboard/endless/level/0')).status).toBe(404);
+  });
+
+  it('endless run: the unbroken run from level 1 counts, hints allowed, order of solving does not matter', async () => {
+    const steady = await player('Steady', 'BE');
+    const gap = await player('Gap', 'BE');
+    const late = await player('Late', 'FR');
+    for (const level of [1, 2, 3]) await solve(steady, 'endless', level, 40_000, { hints: level === 2 ? 1 : 0 });
+    await solve(gap, 'endless', 1, 40_000);
+    await solve(gap, 'endless', 3, 40_000);
+    // Synced out of order (offline play): level 2 arrives before level 1.
+    await solve(late, 'endless', 2, 40_000);
+    await solve(late, 'endless', 1, 40_000);
+
+    const board = (await gap.call('GET', '/api/leaderboard/endless/run')).json;
+    expect(board.entries.map((e: { name: string; value: number }) => [e.name, e.value])).toEqual([
+      ['Steady', 3],
+      ['Late', 2],
+      ['Gap', 1],
+    ]);
+    expect(board.you).toEqual({ rank: 3, value: 1 });
+    expect(names((await gap.call('GET', '/api/leaderboard/endless/run?country=FR')).json)).toEqual(['Late']);
+  });
+
+  it('endless run ties go to whoever got there first', async () => {
+    const first = await player('First');
+    const second = await player('Second');
+    await solve(first, 'endless', 1, 40_000);
+    await solve(second, 'endless', 1, 20_000);
+    expect(names((await first.call('GET', '/api/leaderboard/endless/run')).json)).toEqual(['First', 'Second']);
+  });
+
+  it('per endless level: fastest verified time without hints', async () => {
+    const quick = await player('Quick');
+    const slow = await player('Slow');
+    const helped = await player('Helped');
+    await solve(slow, 'endless', 1, 50_000);
+    await solve(quick, 'endless', 1, 25_000);
+    await solve(helped, 'endless', 1, 10_000, { hints: 2 });
+    const board = (await slow.call('GET', '/api/leaderboard/endless/level/1')).json;
+    expect(board.level).toBe(1);
+    expect(names(board)).toEqual(['Quick', 'Slow']);
+    expect(board.you).toEqual({ rank: 2, value: 50_000 });
+  });
+
+  it('progress made before signing in counts once the account has a name', async () => {
+    withGoogle();
+    google.sub = 'returning-player';
+    const phone = client('198.18.1.1');
+    await signIn(phone);
+    await phone.call('PUT', '/api/profile/account', { displayName: 'Returner' });
+
+    const tablet = client('198.18.1.2');
+    await tablet.call('POST', '/api/profile');
+    await solve(tablet, 'endless', 1, 40_000);
+    await solve(tablet, 'endless', 2, 40_000);
+    await signIn(tablet);
+    const board = (await tablet.call('GET', '/api/leaderboard/endless/run')).json;
+    expect(board.entries).toEqual([{ rank: 1, name: 'Returner', country: null, value: 2, you: true }]);
+  });
+
+  it('the migration fills in runs for results that already existed', async () => {
+    const db = createTestDb([migration, migration2, migration3]);
+    db.raw.prepare("INSERT INTO profiles (id, token_hash, recovery_hash, created_at) VALUES ('p1', 't', 'r', 0)").run();
+    for (const [level, at] of [[1, 10], [2, 30], [3, 20], [5, 40]]) {
+      db.raw.prepare('INSERT INTO endless_results (profile_id, level, time_ms, hints, solved_at) VALUES (?, ?, 1000, 0, ?)').run('p1', level, at);
+    }
+    db.raw.exec(migration4);
+    expect(db.raw.prepare('SELECT endless_run, endless_run_at FROM profiles').get()).toEqual({ endless_run: 3, endless_run_at: 30 });
   });
 });
 

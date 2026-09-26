@@ -8,6 +8,7 @@ import { EndlessGame } from './ui/EndlessGame.tsx';
 import { Home } from './ui/Home.tsx';
 import { HowTo } from './ui/HowTo.tsx';
 import { LazyInfoPage } from './ui/LazyInfoPage.tsx';
+import { LazyLeaderboard } from './ui/LazyLeaderboard.tsx';
 import { SettingsDialog } from './ui/SettingsDialog.tsx';
 import { UpdateBanner } from './ui/UpdateBanner.tsx';
 
@@ -48,6 +49,7 @@ export function App() {
         <Home
           onDaily={() => navigate('daily')}
           onEndless={() => navigate('endless')}
+          onLeaderboard={() => navigate('leaderboard')}
           onHowTo={() => setHowTo(true)}
           onSettings={() => setSettings(true)}
           profileNotice={profileNotice}
@@ -55,6 +57,7 @@ export function App() {
       )}
       {route === 'daily' && <DailyGame onExit={goBack} />}
       {route === 'endless' && <EndlessGame onExit={goBack} />}
+      {route === 'leaderboard' && <LazyLeaderboard />}
       {(route === 'how-to-play' || route === 'about' || route === 'privacy' || route === 'cookies' || route === 'terms') && (
         <LazyInfoPage id={route} />
       )}

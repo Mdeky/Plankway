@@ -161,6 +161,36 @@ export function forgetProfile(): void {
   saveProfileInfo(null);
 }
 
+// ── Leaderboards ────────────────────────────────────────────────────────────
+
+export interface BoardEntry {
+  rank: number;
+  name: string;
+  country: string | null;
+  value: number;
+  you?: true;
+}
+
+export interface Board {
+  entries: BoardEntry[];
+  you: { rank: number; value: number } | { rank: null; reason: string } | null;
+}
+
+export type BoardKind = { kind: 'daily'; number: number } | { kind: 'level'; level: number } | { kind: 'run' };
+
+/** A leaderboard, or null when offline. `country` narrows it to one country. */
+export async function fetchBoard(board: BoardKind, country: string | null): Promise<Board | null> {
+  const path =
+    board.kind === 'daily'
+      ? `/leaderboard/daily/${board.number}`
+      : board.kind === 'level'
+        ? `/leaderboard/endless/level/${board.level}`
+        : '/leaderboard/endless/run';
+  const { status, data } = await request('GET', country ? `${path}?country=${encodeURIComponent(country)}` : path);
+  if (status !== 200 || !data || !Array.isArray(data.entries)) return null;
+  return data as unknown as Board;
+}
+
 // ── Accounts ────────────────────────────────────────────────────────────────
 
 export interface Account {

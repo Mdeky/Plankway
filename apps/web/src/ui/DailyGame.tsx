@@ -11,6 +11,7 @@ import {
 } from '@bridgle/core';
 import { fetchDaily, requestStartToken } from '../game/api.ts';
 import { t } from '../i18n.ts';
+import { navigate } from '../route.ts';
 import { loadDailyRecord, loadDailyStats, saveDailyRecord, todayNumber } from '../game/daily-store.ts';
 import { GeneratorClient, type GeneratedGame } from '../game/generator-client.ts';
 import { createSession, type Session } from '../game/session.ts';
@@ -220,6 +221,9 @@ function ResultDialog({
           }}
         >
           {t('share.button')}
+        </button>
+        <button class="btn" onClick={() => navigate('leaderboard')}>
+          {t('board.title')}
         </button>
         <button class="btn" onClick={onClose}>
           {t('common.close')}

@@ -13,13 +13,14 @@ type DailyState = 'new' | 'playing' | 'solved';
 interface Props {
   onDaily(): void;
   onEndless(): void;
+  onLeaderboard(): void;
   onHowTo(): void;
   onSettings(): void;
   /** Opens the profile dialog with this message (after returning from a sign-in). */
   profileNotice?: MessageKey | null;
 }
 
-export function Home({ onDaily, onEndless, onHowTo, onSettings, profileNotice }: Props) {
+export function Home({ onDaily, onEndless, onLeaderboard, onHowTo, onSettings, profileNotice }: Props) {
   const progress = loadEndlessProgress();
   const [number, setNumber] = useState(todayNumber);
   const [daily, setDaily] = useState<DailyState>('new');
@@ -55,6 +56,12 @@ export function Home({ onDaily, onEndless, onHowTo, onSettings, profileNotice }:
           <button class="btn big" onClick={onEndless}>
             <span>{t('menu.endless')}</span>
             <small>{t('menu.endless.sub', { level: progress.level, best: progress.best })}</small>
+          </button>
+          <button class="btn" onClick={onLeaderboard}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4zM7 6H4a3 3 0 003 4M17 6h3a3 3 0 01-3 4" />
+            </svg>
+            {t('board.title')}
           </button>
           <div class="menu-row">
             <button class="btn" onClick={() => setShowStats(true)}>

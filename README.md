@@ -174,6 +174,18 @@ Optional. Without an account everything keeps working with the anonymous profile
   `wrangler secret put GOOGLE_CLIENT_SECRET`. The button only appears when both are set. Locally, put
   them in `.dev.vars` together with `SITE_ORIGIN=http://localhost:5173`.
 
+### Leaderboards (`apps/api/src/leaderboard.ts`)
+
+Only players with an account and a chosen name appear; anonymous progress counts once it moves
+into an account. Each board is world-wide or `?country=XX`, shows the top 50 and the player's own
+place (or why they're not on it: `no-name`, `not-played`, `hints`, `unverified`).
+
+- `GET /api/leaderboard/daily/:number`: fastest verified time without hints.
+- `GET /api/leaderboard/endless/level/:level`: same, per endless level.
+- `GET /api/leaderboard/endless/run`: furthest endless level, counted as the unbroken run from
+  level 1 (hints allowed). Kept in `profiles.endless_run` whenever endless results are added or
+  merged; ties go to whoever got there first.
+
 ### Daily puzzles and endless levels
 
 `node scripts/generate-daily.ts --apply local|remote` fills D1 up to 14 days ahead (idempotent).

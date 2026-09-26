@@ -861,6 +861,127 @@ a.btn {
   flex: 1;
 }
 
+/* ── Leaderboard ──────────────────────────────────── */
+
+.segmented {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--btn);
+  box-shadow: var(--shadow);
+}
+
+.segmented button {
+  min-height: 40px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.segmented button.active {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.segmented.small {
+  justify-self: center;
+  width: min(100%, 320px);
+  margin: 0 auto;
+}
+
+.segmented.small button {
+  min-height: 36px;
+  font-size: 0.9rem;
+}
+
+.stepper {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  text-align: center;
+  font-weight: 700;
+}
+
+.board-rule,
+.board-empty {
+  margin: 0;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.board-empty {
+  padding: 24px 0;
+}
+
+.board {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.board li {
+  display: grid;
+  grid-template-columns: 2.4em 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.board li.you {
+  outline: 2px solid var(--accent);
+  font-weight: 700;
+}
+
+.board-rank {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.board li:nth-child(-n + 3) .board-rank {
+  color: var(--text);
+  font-weight: 800;
+}
+
+.board-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board-country {
+  padding: 1px 6px;
+  border: 1px solid var(--btn-border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.board-value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.board-you {
+  margin: 4px 0 0;
+  text-align: center;
+}
+
 /* ── Pages, footer, ads ───────────────────────────── */
 
 .site-footer {

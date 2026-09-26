@@ -16,6 +16,7 @@ import {
   type Solution,
 } from '@bridgle/core';
 import type { Env } from './db.ts';
+import { runBoard, timeBoard, updateRun } from './leaderboard.ts';
 import { isNameAllowed } from './names.ts';
 import { authorizeUrl, configuredProviders, exchangeCode, OAuthError, pkceChallenge, type Provider } from './oauth.ts';
 import { keyedHash, newRecoveryCode, newToken, normalizeRecoveryCode, signStart, verifyStart, type PlayMode } from './security.ts';
@@ -334,6 +335,7 @@ export function createApp(options: AppOptions = {}) {
     )
       .bind(profileId, level, timeMs, hints, verified ? 1 : 0, now())
       .run();
+    if (insert.meta.changes > 0) await updateRun(c.env.DB, profileId);
     return c.json({ accepted: true, duplicate: insert.meta.changes === 0, verified });
   });
 
@@ -389,6 +391,29 @@ export function createApp(options: AppOptions = {}) {
     await c.env.DB.batch(deleteProfileRows(c, profileId));
     deleteCookie(c, COOKIE_NAME, { path: '/api', secure: true });
     return c.body(null, 204);
+  });
+
+  // ── Leaderboards ──────────────────────────────────────────────────────────
+
+  /** `?country=BE` narrows a board to one country; anything else means the whole world. */
+  const boardCountry = (c: Context<AppEnv>): string | null => {
+    const country = c.req.query('country');
+    if (country === undefined || country === '') return null;
+    if (!isCountry(country)) fail(400, 'invalid-country');
+    return country;
+  };
+
+  app.get('/leaderboard/daily/:number', async (c) => {
+    const number = Number(c.req.param('number'));
+    if (!Number.isInteger(number) || number < 1 || number > latestNumber()) fail(404, 'not-available');
+    return c.json({ number, ...(await timeBoard(c.env.DB, 'daily', number, boardCountry(c), await findProfile(c))) });
+  });
+
+  app.get('/leaderboard/endless/run', async (c) => c.json(await runBoard(c.env.DB, boardCountry(c), await findProfile(c))));
+
+  app.get('/leaderboard/endless/level/:level', async (c) => {
+    const level = readLevel(c);
+    return c.json({ level, ...(await timeBoard(c.env.DB, 'level', level, boardCountry(c), await findProfile(c))) });
   });
 
   // ── Accounts ──────────────────────────────────────────────────────────────
@@ -533,6 +558,7 @@ export function createApp(options: AppOptions = {}) {
             ).bind(linked.profile_id, current),
             ...deleteProfileRows(c, current),
           ]);
+          await updateRun(c.env.DB, linked.profile_id);
         }
       }
       if (current !== linked.profile_id) await startSession(c, linked.profile_id);
