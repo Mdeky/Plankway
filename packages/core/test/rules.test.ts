@@ -116,4 +116,31 @@ describe('validateSolution', () => {
     counts[findEdge(board, tl, bl)] = 1;
     expect(islandStatuses(board, counts)).toEqual(['over', 'full', 'open', 'open']);
   });
+
+  it('marks a complete group that is cut off from the rest as isolated', () => {
+    // 1 1 . 2 . 2  → the left pair is closed off while the right side is still open.
+    const p = fromAscii(['11.2.2']);
+    const board = buildBoard(p);
+    const counts = new Int8Array(board.edges.length);
+    counts[findEdge(board, 0, 1)] = 1;
+    expect(islandStatuses(board, counts)).toEqual(['isolated', 'isolated', 'open', 'open']);
+  });
+
+  it('keeps the largest group full when every island is complete but split up', () => {
+    // 1 1 . 1 2 1 → both groups are complete; the smaller one is the odd one out.
+    const p = fromAscii(['11.121']);
+    const board = buildBoard(p);
+    const counts = new Int8Array(board.edges.length);
+    counts[findEdge(board, 0, 1)] = 1;
+    counts[findEdge(board, 2, 3)] = 1;
+    counts[findEdge(board, 3, 4)] = 1;
+    expect(islandStatuses(board, counts)).toEqual(['isolated', 'isolated', 'full', 'full', 'full']);
+  });
+
+  it('shows no isolation on a solved grid', () => {
+    const board = buildBoard(ring);
+    const counts = new Int8Array(board.edges.length);
+    for (const [a, b] of [[tl, tr], [bl, br], [tl, bl], [tr, br]] as const) counts[findEdge(board, a, b)] = 1;
+    expect(islandStatuses(board, counts)).toEqual(['full', 'full', 'full', 'full']);
+  });
 });

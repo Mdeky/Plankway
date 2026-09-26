@@ -51,24 +51,21 @@ describe('share text', () => {
   beforeEach(() => setLang('en'));
 
   it('matches the spoiler-free format', () => {
-    expect(shareText({ number: 42, timeMs: 151_000, undos: 0, hints: 0 }, 'plankway.com')).toBe(
-      'Plankway #42 🌉 2:31\n🏝️🏝️🏝️🏝️🏝️ 0 undos\nplankway.com',
-    );
+    expect(shareText({ number: 42, timeMs: 151_000, hints: 0 }, 'plankway.com')).toBe('Plankway #42 🌉 2:31\n🏝️🏝️🏝️🏝️🏝️\nplankway.com');
   });
 
   it('is translated', () => {
     setLang('nl');
-    expect(shareText({ number: 1, timeMs: 5_000, undos: 2, hints: 0 }, 'x')).toBe('Plankway #1 🌉 0:05\n🏝️🏝️🏝️🏝️🏝️ 2 undo’s\nx');
+    expect(shareText({ number: 1, timeMs: 5_000, hints: 1 }, 'x')).toBe('Plankway #1 🌉 0:05\n🏝️🏝️🏝️🌊🌊 💡 1 hint\nx');
   });
 
   it('mentions hints', () => {
-    expect(shareText({ number: 3, timeMs: 61_000, undos: 1, hints: 2 }, 'x')).toBe('Plankway #3 🌉 1:01\n🏝️🌊🌊🌊🌊 1 undo · 💡 2 hints\nx');
+    expect(shareText({ number: 3, timeMs: 61_000, hints: 2 }, 'x')).toBe('Plankway #3 🌉 1:01\n🏝️🌊🌊🌊🌊 💡 2 hints\nx');
   });
 
-  it('washes islands away for hints and undos, but keeps one', () => {
-    expect(islandRow(0, 0)).toBe('🏝️🏝️🏝️🏝️🏝️');
-    expect(islandRow(3, 0)).toBe('🏝️🏝️🏝️🏝️🌊');
-    expect(islandRow(0, 1)).toBe('🏝️🏝️🏝️🌊🌊');
-    expect(islandRow(50, 9)).toBe('🏝️🌊🌊🌊🌊');
+  it('washes islands away for hints, but keeps one', () => {
+    expect(islandRow(0)).toBe('🏝️🏝️🏝️🏝️🏝️');
+    expect(islandRow(1)).toBe('🏝️🏝️🏝️🌊🌊');
+    expect(islandRow(9)).toBe('🏝️🌊🌊🌊🌊');
   });
 });

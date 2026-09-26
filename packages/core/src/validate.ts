@@ -2,7 +2,7 @@ import { buildBoard, findEdge, type Board } from './board.ts';
 import type { Bridge, Puzzle } from './model.ts';
 import { DEFAULT_RULES } from './rules/index.ts';
 import type { RuleModule } from './rules/types.ts';
-import { isConnected } from './state.ts';
+import { islandComponents, isConnected } from './state.ts';
 
 export type ValidationIssue =
   /** Not a straight, unobstructed line between two neighbouring islands. */
@@ -18,7 +18,7 @@ export interface ValidationResult {
   issues: ValidationIssue[];
 }
 
-export type IslandStatus = 'open' | 'full' | 'over';
+export type IslandStatus = 'open' | 'full' | 'over' | 'isolated';
 
 /** Full rule check of a finished grid, e.g. a solution submitted to the server. */
 export function validateSolution(
@@ -84,13 +84,35 @@ export function islandDegrees(board: Board, counts: ArrayLike<number>): Int16Arr
   return out;
 }
 
-/** Per-island feedback for the UI while playing. */
+/**
+ * Per-island feedback for the UI while playing. `isolated` marks a group of islands that
+ * is complete but cut off from the rest: it can never join the network any more. When
+ * every island is complete but the grid falls apart, the largest group stays `full` and
+ * the others are `isolated`.
+ */
 export function islandStatuses(board: Board, counts: ArrayLike<number>): IslandStatus[] {
   const degrees = islandDegrees(board, counts);
-  return board.puzzle.islands.map((isl, i) => {
+  const out: IslandStatus[] = board.puzzle.islands.map((isl, i) => {
     const d = degrees[i]!;
     return d === isl.n ? 'full' : d > isl.n ? 'over' : 'open';
   });
+  if (out.length < 2) return out;
+
+  const roots = islandComponents(board, counts);
+  const size = new Map<number, number>();
+  const complete = new Map<number, boolean>();
+  out.forEach((st, i) => {
+    const r = roots[i]!;
+    size.set(r, (size.get(r) ?? 0) + 1);
+    complete.set(r, (complete.get(r) ?? true) && st === 'full');
+  });
+  if (size.size < 2) return out;
+
+  let keep = -1;
+  if ([...complete.values()].every(Boolean)) {
+    for (const [r, n] of size) if (keep < 0 || n > size.get(keep)!) keep = r;
+  }
+  return out.map((st, i) => (roots[i] !== keep && complete.get(roots[i]!) ? 'isolated' : st));
 }
 
 /** True when the grid is a complete, valid solution. */

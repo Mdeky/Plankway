@@ -133,10 +133,6 @@ export function EndlessGame({ onExit }: { onExit(): void }) {
               <dd>{formatTime(win.timeMs)}</dd>
             </div>
             <div>
-              <dt>{t('win.undos')}</dt>
-              <dd>{win.undos}</dd>
-            </div>
-            <div>
               <dt>{t('win.hints')}</dt>
               <dd>{win.hints}</dd>
             </div>

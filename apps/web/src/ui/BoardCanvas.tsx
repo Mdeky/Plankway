@@ -6,22 +6,26 @@ import { BoardView, type ViewModel } from '../game/view.ts';
 interface Props {
   model: ViewModel;
   onCycle(edge: number): void;
+  onRemove(edge: number): void;
   onFocus?(island: number, selected: boolean): void;
   /** Receives the view so the parent can flash a blocking bridge. */
   viewRef?: { current: BoardView | null };
 }
 
-export function BoardCanvas({ model, onCycle, onFocus, viewRef }: Props) {
+export function BoardCanvas({ model, onCycle, onRemove, onFocus, viewRef }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const view = useRef<BoardView | null>(null);
   const cycleRef = useRef(onCycle);
   cycleRef.current = onCycle;
+  const removeRef = useRef(onRemove);
+  removeRef.current = onRemove;
   const focusRef = useRef(onFocus);
   focusRef.current = onFocus;
 
   useEffect(() => {
     const v = new BoardView(canvasRef.current!, {
       onCycle: (edge) => cycleRef.current(edge),
+      onRemove: (edge) => removeRef.current(edge),
       onFocus: (island, selected) => focusRef.current?.(island, selected),
     });
     view.current = v;

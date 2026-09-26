@@ -45,6 +45,7 @@ const PALETTE_VARS: Record<Exclude<keyof Palette, 'night'>, string> = {
   hint: '--hint',
   mistake: '--mistake',
   full: '--full',
+  isolated: '--isolated',
   glow: '--glow',
   sail: '--sail',
   sailStripe: '--sail-stripe',
@@ -66,6 +67,7 @@ export const BUILD_MS = 220;
 export const FADE_MS = 320;
 export const SPLASH_MS = 520;
 export const WIN_MS = 2600;
+export const POP_MS = 420;
 
 export interface Build {
   edge: number;
@@ -103,6 +105,8 @@ export interface Scene {
   builds: Map<number, Build>;
   fades: Fade[];
   splashes: Splash[];
+  /** Islands whose flag just went up, with the start time of the pop. */
+  pops: Map<number, number>;
   winStart: number | null;
 }
 
@@ -308,7 +312,7 @@ function drawIsland(ctx: CanvasRenderingContext2D, scene: Scene, art: IslandArt,
   ctx.lineWidth = Math.max(1.2, cell * 0.03);
   ctx.fill(art.outer);
   ctx.stroke(art.outer);
-  ctx.fillStyle = status === 'full' ? p.grassFull : status === 'over' ? p.over : p.grass;
+  ctx.fillStyle = status === 'full' ? p.grassFull : status === 'over' ? p.over : status === 'isolated' ? p.isolated : p.grass;
   ctx.fill(art.inner);
 
   drawDecor(ctx, art.decor, c.x + art.decorAt.x * cell, c.y + art.decorAt.y * cell, cell * 0.36, p);
@@ -334,8 +338,24 @@ function drawIsland(ctx: CanvasRenderingContext2D, scene: Scene, art: IslandArt,
   ctx.fillText(String(n), c.x, c.y + cell * 0.045);
   ctx.shadowBlur = 0;
 
-  // Status as shape, not only colour: a flag when complete, a "!" badge when over.
-  if (status === 'full') drawFlag(ctx, c.x + r * 0.55, c.y - r * 0.2, cell * 0.28, p);
+  // Status as shape, not only colour: a flag when complete, a "!" badge when over, and a
+  // dashed ring plus an orange flag for a complete group that is cut off.
+  if (status === 'isolated') {
+    ctx.strokeStyle = p.isolated;
+    ctx.lineWidth = Math.max(2, cell * 0.045);
+    ctx.setLineDash([r * 0.22, r * 0.16]);
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, r * 1.12, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  if (status === 'full' || status === 'isolated') {
+    const start = scene.pops.get(i);
+    const grow = start === undefined || scene.still ? 1 : popScale(clamp01((scene.now - start) / POP_MS));
+    const size = cell * 0.4 * grow;
+    const base = c.y - r * 0.05 + cell * 0.2;
+    drawFlag(ctx, c.x + r * 0.5, base - size / 2, size, status === 'full' ? p.full : p.isolated, p);
+  }
   if (status === 'over') drawBang(ctx, c.x + r * 0.72, c.y - r * 0.72, cell * 0.13, p);
 
   if (scene.selected === i) {
@@ -356,25 +376,45 @@ function drawIsland(ctx: CanvasRenderingContext2D, scene: Scene, art: IslandArt,
   ctx.restore();
 }
 
-function drawFlag(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, p: Palette) {
+/** Overshoots a little so a new flag visibly pops up. */
+function popScale(t: number): number {
+  if (t >= 1) return 1;
+  const c = 2.2;
+  const u = t - 1;
+  return Math.max(0, 1 + (c + 1) * u ** 3 + c * u ** 2);
+}
+
+/** Flag planted at (x, y + s/2), pole height `s`. */
+function drawFlag(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, color: string, p: Palette) {
+  if (s <= 0) return;
   ctx.save();
-  ctx.strokeStyle = p.plankDark;
-  ctx.lineWidth = Math.max(1.2, s * 0.08);
   ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.moveTo(x, y + s * 0.5);
-  ctx.lineTo(x, y - s * 0.5);
-  ctx.stroke();
-  ctx.fillStyle = p.full;
+  ctx.lineJoin = 'round';
+  // A light halo keeps pole and cloth readable on every grass colour.
+  for (const [stroke, extra] of [
+    [p.sign, 2.2],
+    [p.plankDark, 0],
+  ] as const) {
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = Math.max(1.4, s * 0.075) + extra;
+    ctx.beginPath();
+    ctx.moveTo(x, y + s * 0.5);
+    ctx.lineTo(x, y - s * 0.5);
+    ctx.stroke();
+  }
+  const cloth = new Path2D();
+  cloth.moveTo(x, y - s * 0.5);
+  cloth.quadraticCurveTo(x + s * 0.32, y - s * 0.44, x + s * 0.62, y - s * 0.28);
+  cloth.quadraticCurveTo(x + s * 0.32, y - s * 0.16, x, y - s * 0.06);
+  cloth.closePath();
+  ctx.strokeStyle = p.sign;
+  ctx.lineWidth = Math.max(1, s * 0.05) + 2.2;
+  ctx.stroke(cloth);
+  ctx.fillStyle = color;
+  ctx.fill(cloth);
   ctx.strokeStyle = p.plankDark;
   ctx.lineWidth = Math.max(1, s * 0.05);
-  ctx.beginPath();
-  ctx.moveTo(x, y - s * 0.5);
-  ctx.quadraticCurveTo(x + s * 0.3, y - s * 0.42, x + s * 0.55, y - s * 0.3);
-  ctx.quadraticCurveTo(x + s * 0.3, y - s * 0.2, x, y - s * 0.12);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
+  ctx.stroke(cloth);
   ctx.restore();
 }
 

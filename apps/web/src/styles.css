@@ -33,6 +33,7 @@
   --trunk: #8a5a32;
   --roof: #d9a441;
   --full: #ffcf3f;
+  --isolated: #ff7a1a;
 
   /* Bridges & reefs */
   --plank: #c68a4f;
@@ -89,6 +90,7 @@
     --trunk: #6b4a2c;
     --roof: #a98543;
     --full: #ffd84d;
+  --isolated: #ff9a3d;
     --plank: #a9774a;
     --plank-dark: #4a3019;
     --rope: #d9c08f;
@@ -136,6 +138,7 @@
   --trunk: #6b4a2c;
   --roof: #a98543;
   --full: #ffd84d;
+  --isolated: #ff9a3d;
   --plank: #a9774a;
   --plank-dark: #4a3019;
   --rope: #d9c08f;
@@ -357,6 +360,22 @@ h2 {
   color: var(--muted);
   font-size: 0.95rem;
   text-align: center;
+}
+
+.status.warn {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.status.warn::before {
+  content: '';
+  display: inline-block;
+  width: 0.7em;
+  height: 0.7em;
+  margin-right: 0.45em;
+  border-radius: 50%;
+  background: var(--isolated);
+  vertical-align: 0.02em;
 }
 
 .toolbar {

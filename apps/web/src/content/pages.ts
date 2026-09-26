@@ -46,8 +46,8 @@ const nl: Record<PageId, Page> = {
         body: [
           [
             'Sleep van een eiland naar een ander (of gewoon in een richting) om een brug te leggen.',
-            'Nog eens slepen geeft een dubbele brug, een derde keer haalt ze weg.',
-            'Of tik op een eiland en daarna op een buur, of tik op een bestaande brug.',
+            'Nog eens slepen geeft een dubbele brug. Tik op een brug om ze weg te halen.',
+            'Of tik op een eiland en daarna op een buur.',
             'Toetsenbord: pijltjes om te bewegen, spatie om een eiland te kiezen, een pijltje om te bouwen, Esc om te annuleren.',
           ],
         ],
@@ -60,7 +60,8 @@ const nl: Record<PageId, Page> = {
             'Een 1 krijgt nooit een dubbele brug.',
             'Twee eilanden met een 1 mogen niet met elkaar verbonden worden: dan raken ze afgesneden.',
             'Kijk naar de riffen: eilanden die op één lijn liggen, kunnen toch onbereikbaar zijn.',
-            'Een eiland met een vlaggetje is af. Een rode rand met "!" betekent: te veel bruggen.',
+            'Een eiland met een geel vlaggetje is af. Een rode rand met "!" betekent: te veel bruggen.',
+            'Een oranje vlaggetje betekent: deze groep eilanden is af, maar ligt afgesneden van de rest. Alle eilanden moeten één netwerk vormen.',
           ],
         ],
       },
@@ -220,8 +221,8 @@ const en: Record<PageId, Page> = {
         body: [
           [
             'Drag from one island to another (or just in a direction) to build a bridge.',
-            'Drag again for a double bridge, a third time to remove it.',
-            'Or tap an island and then a neighbour, or tap an existing bridge.',
+            'Drag again for a double bridge. Tap a bridge to remove it.',
+            'Or tap an island and then a neighbour.',
             'Keyboard: arrows to move, space to pick an island, an arrow to build, Esc to cancel.',
           ],
         ],
@@ -234,7 +235,8 @@ const en: Record<PageId, Page> = {
             'A 1 never gets a double bridge.',
             'Two 1s may not be connected to each other: they would be cut off.',
             'Watch the reefs: islands that line up can still be unreachable.',
-            'An island with a flag is complete. A red ring with "!" means too many bridges.',
+            'An island with a yellow flag is complete. A red ring with "!" means too many bridges.',
+            'An orange flag means: this group of islands is complete but cut off from the rest. All islands must form one network.',
           ],
         ],
       },

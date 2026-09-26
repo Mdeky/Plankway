@@ -179,7 +179,7 @@ function ResultDialog({
 }) {
   const [shared, setShared] = useState<ShareOutcome | null>(null);
   const [newDay, setNewDay] = useState(false);
-  const text = shareText({ number: record.number, timeMs: record.timeMs ?? 0, undos: record.undos, hints: record.hints });
+  const text = shareText({ number: record.number, timeMs: record.timeMs ?? 0, hints: record.hints });
 
   return (
     <Dialog title={t('win.title')} onClose={onClose}>
@@ -187,10 +187,6 @@ function ResultDialog({
         <div>
           <dt>{t('win.time')}</dt>
           <dd>{formatTime(record.timeMs ?? 0)}</dd>
-        </div>
-        <div>
-          <dt>{t('win.undos')}</dt>
-          <dd>{record.undos}</dd>
         </div>
         <div>
           <dt>{t('win.hints')}</dt>

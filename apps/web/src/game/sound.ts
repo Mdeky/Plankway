@@ -120,6 +120,14 @@ export const sfx = {
     if (!ac) return;
     tone(ac, ac.currentTime, 880, 0.06, 'sine', 0.05, 990);
   },
+  /** Light two-note chime when an island gets its last bridge. */
+  complete(): void {
+    const ac = audio();
+    if (!ac) return;
+    const t = ac.currentTime + 0.2;
+    tone(ac, t, 1175, 0.12, 'sine', 0.05);
+    tone(ac, t + 0.07, 1568, 0.18, 'sine', 0.045);
+  },
   hint(): void {
     const ac = audio();
     if (!ac) return;

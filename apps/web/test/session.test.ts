@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { endlessConfig, findEdge, generatePuzzle, type Puzzle } from '@bridgle/core';
-import { createSession, cycleEdge, hint, reset, undo, type Session } from '../src/game/session.ts';
+import { createSession, cycleEdge, hint, removeEdge, reset, undo, type Session } from '../src/game/session.ts';
 
 // 2 . 2
 // . . .
@@ -39,6 +39,18 @@ describe('session', () => {
     expect(s.counts[e]).toBe(2);
     s = play(s, e);
     expect(s.counts[e]).toBe(0);
+  });
+
+  it('removes a single or double bridge in one tap', () => {
+    let s = createSession(ring, ringSolution);
+    const e = edge(s, 0, 1);
+    s = play(play(s, e), e);
+    expect(s.counts[e]).toBe(2);
+    s = removeEdge(s, e);
+    expect(s.counts[e]).toBe(0);
+    expect(removeEdge(s, e)).toBe(s);
+    s = undo(s);
+    expect(s.counts[e]).toBe(2);
   });
 
   it('detects the win and locks the board', () => {

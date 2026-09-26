@@ -15,6 +15,7 @@ import {
   BUILD_MS,
   drawScene,
   FADE_MS,
+  POP_MS,
   readPalette,
   SPLASH_MS,
   WIN_MS,
@@ -38,6 +39,8 @@ export interface ViewModel {
 export interface ViewCallbacks {
   /** Player wants to cycle this edge (0 → 1 → 2 → 0). */
   onCycle(edge: number): void;
+  /** Player tapped a placed bridge to take it away. */
+  onRemove(edge: number): void;
   /** Keyboard focus or selection moved (for screen reader announcements). */
   onFocus?(island: number, selected: boolean): void;
 }
@@ -81,6 +84,7 @@ export class BoardView {
   private builds = new Map<number, Build>();
   private fades: Fade[] = [];
   private splashes: Splash[] = [];
+  private pops = new Map<number, number>();
   private winStart: number | null = null;
   private winDone: (() => void) | null = null;
   private winTimer: ReturnType<typeof setTimeout> | undefined;
@@ -132,9 +136,14 @@ export class BoardView {
       this.builds.clear();
       this.fades = [];
       this.splashes = [];
+      this.pops.clear();
       this.resize();
     } else if (previous && previous.counts !== model.counts && !this.still) {
       this.animateChanges(previous.counts, model.counts);
+      const now = performance.now();
+      model.statuses.forEach((st, i) => {
+        if ((st === 'full' || st === 'isolated') && previous.statuses[i] !== st) this.pops.set(i, now);
+      });
     }
     if (model.locked) {
       this.selected = -1;
@@ -228,6 +237,7 @@ export class BoardView {
     for (const [edge, b] of this.builds) if (now - b.start > BUILD_MS) this.builds.delete(edge);
     this.fades = this.fades.filter((f) => now - f.start < FADE_MS);
     this.splashes = this.splashes.filter((s) => now - s.start < SPLASH_MS);
+    for (const [island, start] of this.pops) if (now - start > POP_MS) this.pops.delete(island);
     if (this.winStart !== null && now - this.winStart > WIN_MS) this.finishWin();
 
     const still = this.still;
@@ -235,6 +245,7 @@ export class BoardView {
       this.builds.size > 0 ||
       this.fades.length > 0 ||
       this.splashes.length > 0 ||
+      this.pops.size > 0 ||
       this.winStart !== null ||
       this.flashEdge >= 0 ||
       (!still && (model.hintEdges.length > 0 || model.mistakeEdges.length > 0 || model.hintIsland >= 0));
@@ -263,6 +274,7 @@ export class BoardView {
           builds: this.builds,
           fades: this.fades,
           splashes: this.splashes,
+          pops: this.pops,
           winStart: this.winStart,
         },
         this.palette,
@@ -354,7 +366,7 @@ export class BoardView {
         this.tapIsland(ptr.island);
       }
     } else if (ptr.bridge >= 0) {
-      if (bridgeAt(model.board, layout, model.counts, p) === ptr.bridge) this.callbacks.onCycle(ptr.bridge);
+      if (bridgeAt(model.board, layout, model.counts, p) === ptr.bridge) this.callbacks.onRemove(ptr.bridge);
     } else {
       this.selected = -1;
     }

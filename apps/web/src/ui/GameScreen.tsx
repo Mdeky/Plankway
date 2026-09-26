@@ -1,12 +1,13 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { findEdge, type Hint } from '@bridgle/core';
+import { findEdge, type Hint, type IslandStatus } from '@bridgle/core';
 import { t, techniqueKey } from '../i18n.ts';
-import { cycleEdge, hint, reset, statuses, undo, type Session } from '../game/session.ts';
+import { cycleEdge, hint, removeEdge, reset, statuses, undo, type Session } from '../game/session.ts';
 import { isSoundOn, setSoundOn, sfx, SOUND_EVENT } from '../game/sound.ts';
 import type { BoardView, ViewModel } from '../game/view.ts';
 import { AdSlot } from './AdSlot.tsx';
 import { BoardCanvas } from './BoardCanvas.tsx';
+import { Dialog } from './Dialog.tsx';
 import { formatTime, useTimer } from './hooks.ts';
 
 interface Props {
@@ -36,6 +37,7 @@ export function GameScreen({ title, session, placeholder, initialMs, onChange, o
   /** Screen reader announcements (visually hidden). */
   const [announce, setAnnounce] = useState('');
   const [celebrating, setCelebrating] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
   const [soundOn, setSound] = useState(isSoundOn);
   const timer = useTimer(!!session && !session.solved, initialMs, session?.puzzle);
   // Input can arrive faster than Preact re-renders; always build on the newest session.
@@ -74,6 +76,7 @@ export function GameScreen({ title, session, placeholder, initialMs, onChange, o
     latest.current = next;
     setHintView(NO_HINT);
     playChangeSound(prev.counts, next.counts);
+    if (!next.solved && newlyFull(statuses(prev), statuses(next))) sfx.complete();
     if (changedEdge >= 0) setAnnounce(describeBridge(next, changedEdge));
     if (next.solved && !prev.solved) {
       // Hold back result dialogs until the short celebration is over (or skipped).
@@ -85,6 +88,8 @@ export function GameScreen({ title, session, placeholder, initialMs, onChange, o
     }
     onChange(next, timer.read());
   };
+  const changeRef = useRef(change);
+  changeRef.current = change;
 
   const onFocusIsland = (island: number, selected: boolean) => {
     const s = latest.current;
@@ -107,6 +112,28 @@ export function GameScreen({ title, session, placeholder, initialMs, onChange, o
     change(result.session, edge);
   };
 
+  const onRemove = (edge: number) => {
+    const current = latest.current;
+    if (!current) return;
+    setMessage('');
+    change(removeEdge(current, edge), edge);
+  };
+
+  // Undo stays available from the keyboard; on the board a tap on a bridge removes it.
+  useEffect(() => {
+    const onKey = (ev: KeyboardEvent) => {
+      if (!(ev.ctrlKey || ev.metaKey) || ev.shiftKey || ev.altKey || ev.key.toLowerCase() !== 'z') return;
+      const target = ev.target as HTMLElement | null;
+      if (target?.closest('input, textarea, [contenteditable="true"]')) return;
+      const current = latest.current;
+      if (!current || current.solved || current.history.length === 0) return;
+      ev.preventDefault();
+      changeRef.current(undo(current));
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   const onHint = () => {
     const current = latest.current;
     if (!current || current.solved) return;
@@ -118,12 +145,15 @@ export function GameScreen({ title, session, placeholder, initialMs, onChange, o
     sfx.hint();
   };
 
+  const islandState = useMemo(() => session && statuses(session), [session]);
+  const isolated = !!islandState?.includes('isolated');
+
   const model: ViewModel | null = useMemo(
     () =>
       session && {
         board: session.board,
         counts: session.counts,
-        statuses: statuses(session),
+        statuses: islandState!,
         hintEdges: hintView.edges,
         hintIsland: hintView.island,
         mistakeEdges: hintView.mistakes,
@@ -161,15 +191,15 @@ export function GameScreen({ title, session, placeholder, initialMs, onChange, o
       </header>
 
       {model ? (
-        <BoardCanvas model={model} onCycle={onCycle} onFocus={onFocusIsland} viewRef={viewRef} />
+        <BoardCanvas model={model} onCycle={onCycle} onRemove={onRemove} onFocus={onFocusIsland} viewRef={viewRef} />
       ) : (
         <div class="board-frame placeholder">
           <p>{placeholder}</p>
         </div>
       )}
 
-      <p class="status" role="status" aria-live="polite">
-        {message}
+      <p class={`status${!message && isolated ? ' warn' : ''}`} role="status" aria-live="polite">
+        {message || (isolated ? t('game.isolated') : '')}
       </p>
       <p class="sr-only" aria-live="polite">
         {announce}
@@ -177,14 +207,7 @@ export function GameScreen({ title, session, placeholder, initialMs, onChange, o
       {celebrating && <p class="skip-hint">{t('win.skip')}</p>}
 
       <nav class="toolbar">
-        <button class="btn" onClick={() => latest.current && change(undo(latest.current))} disabled={!playing || session!.history.length === 0}>
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M9 14L4 9l5-5" />
-            <path d="M4 9h11a5 5 0 010 10h-3" />
-          </svg>
-          {t('game.undo')}
-        </button>
-        <button class="btn" onClick={() => latest.current && change(reset(latest.current))} disabled={!playing}>
+        <button class="btn" onClick={() => setConfirmReset(true)} disabled={!playing || session!.counts.every((c) => c === 0)}>
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M4 12a8 8 0 1 0 3-6.2" />
             <path d="M4 4v5h5" />
@@ -205,6 +228,26 @@ export function GameScreen({ title, session, placeholder, initialMs, onChange, o
       <AdSlot placement="board" />
 
       {!celebrating && children}
+
+      {confirmReset && (
+        <Dialog title={t('game.resetTitle')} onClose={() => setConfirmReset(false)}>
+          <p>{t('game.resetBody')}</p>
+          <div class="dialog-actions">
+            <button class="btn" onClick={() => setConfirmReset(false)}>
+              {t('common.cancel')}
+            </button>
+            <button
+              class="btn primary"
+              onClick={() => {
+                setConfirmReset(false);
+                if (latest.current) change(reset(latest.current));
+              }}
+            >
+              {t('game.reset')}
+            </button>
+          </div>
+        </Dialog>
+      )}
     </main>
   );
 }
@@ -218,6 +261,11 @@ function playChangeSound(before: ArrayLike<number>, after: ArrayLike<number>): v
   }
   if (up) sfx.build();
   else if (down) sfx.splash();
+}
+
+/** True when at least one island just became complete. */
+function newlyFull(before: IslandStatus[], after: IslandStatus[]): boolean {
+  return after.some((st, i) => st === 'full' && before[i] !== 'full' && before[i] !== 'isolated');
 }
 
 function describeIsland(s: Session, island: number): string {

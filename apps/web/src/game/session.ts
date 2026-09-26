@@ -65,6 +65,12 @@ export function cycleEdge(s: Session, edge: number): MoveResult {
   return { session: withCounts(s, edge, next), blocked: false };
 }
 
+/** Tapping a bridge takes it away completely, single or double. */
+export function removeEdge(s: Session, edge: number): Session {
+  if (s.solved || (s.counts[edge] as number) === 0) return s;
+  return withCounts(s, edge, 0);
+}
+
 function withCounts(s: Session, edge: number, value: number): Session {
   const counts = s.counts.slice();
   counts[edge] = value;

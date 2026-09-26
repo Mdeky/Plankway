@@ -34,6 +34,7 @@ export interface Palette {
   hint: string;
   mistake: string;
   full: string;
+  isolated: string;
   glow: string;
   sail: string;
   sailStripe: string;
