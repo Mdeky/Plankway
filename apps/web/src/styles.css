@@ -1017,8 +1017,25 @@ a.btn {
 }
 
 .board-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
+}
+
+.board-hints {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.board-hints .icon {
+  width: 15px;
+  height: 15px;
 }
 
 .board-you {

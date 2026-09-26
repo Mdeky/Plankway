@@ -2,8 +2,8 @@
  * Leaderboards. Only players who signed in and picked a name appear; anonymous profiles
  * still count once they sign in (their results move into the account).
  *
- * - daily:   fastest verified time without hints, per daily puzzle
- * - level:   fastest verified time without hints, per endless level
+ * - daily:   fastest verified time per daily puzzle; every hint adds 30 seconds
+ * - level:   the same, per endless level
  * - run:     furthest endless level, counted as the unbroken run from level 1 (hints allowed)
  *
  * Each board covers the whole world, one country, or a player and their friends.
@@ -12,16 +12,24 @@ import type { D1Database } from './db.ts';
 
 export const BOARD_SIZE = 50;
 
+/** Every hint used adds this much to a time on the time boards. */
+export const HINT_PENALTY_MS = 30_000;
+/** Must match the expression the board indexes use (migration 0006). */
+const SCORE = `r.time_ms + r.hints * ${HINT_PENALTY_MS}`;
+
 export interface BoardEntry {
   rank: number;
   name: string;
   country: string | null;
+  /** Time boards: time plus hint penalty. Run board: furthest level. */
   value: number;
+  /** Time boards: hints included in `value` (only when there were any). */
+  hints?: number;
   you?: true;
 }
 
 /** Why the player isn't on the board (or null when they are, or have no profile). */
-export type Absence = 'no-name' | 'not-played' | 'hints' | 'unverified';
+export type Absence = 'no-name' | 'not-played' | 'unverified';
 
 export interface Board {
   entries: BoardEntry[];
@@ -77,40 +85,39 @@ export async function timeBoard(
   const table = kind === 'daily' ? 'results' : 'endless_results';
   const key = kind === 'daily' ? 'puzzle_number' : 'level';
   const [filter, filterArgs] = scopeFilter(scope);
-  const where = `r.${key} = ? AND r.verified = 1 AND r.hints = 0 AND p.display_name IS NOT NULL ${filter}`;
+  const where = `r.${key} = ? AND r.verified = 1 AND p.display_name IS NOT NULL ${filter}`;
   const args = [id, ...filterArgs];
 
   const { results } = await db
     .prepare(
-      `SELECT p.id AS id, p.display_name AS name, p.country AS country, r.time_ms AS value, r.solved_at AS at
+      `SELECT p.id AS id, p.display_name AS name, p.country AS country, ${SCORE} AS value, r.hints AS hints, r.solved_at AS at
        FROM ${table} r JOIN profiles p ON p.id = r.profile_id
-       WHERE ${where} ORDER BY r.time_ms, r.solved_at LIMIT ${BOARD_SIZE}`,
+       WHERE ${where} ORDER BY ${SCORE}, r.solved_at LIMIT ${BOARD_SIZE}`,
     )
     .bind(...args)
-    .all<Row>();
-  const entries = toEntries(results, profileId);
+    .all<Row & { hints: number }>();
+  const entries = toEntries(results, profileId).map((e, i) => (results[i]!.hints > 0 ? { ...e, hints: results[i]!.hints } : e));
   if (!profileId) return { entries, you: null };
 
   const own = await db
     .prepare(
-      `SELECT r.time_ms AS value, r.solved_at AS at, r.hints AS hints, r.verified AS verified,
+      `SELECT ${SCORE} AS value, r.solved_at AS at, r.verified AS verified,
               p.display_name AS name, p.country AS country
        FROM profiles p LEFT JOIN ${table} r ON r.profile_id = p.id AND r.${key} = ?
        WHERE p.id = ?`,
     )
     .bind(id, profileId)
-    .first<{ value: number | null; at: number | null; hints: number | null; verified: number | null; name: string | null; country: string | null }>();
+    .first<{ value: number | null; at: number | null; verified: number | null; name: string | null; country: string | null }>();
 
   if (!own?.name) return { entries, you: { rank: null, reason: 'no-name' } };
   if (own.value === null) return { entries, you: { rank: null, reason: 'not-played' } };
-  if (own.hints) return { entries, you: { rank: null, reason: 'hints' } };
   if (!own.verified) return { entries, you: { rank: null, reason: 'unverified' } };
   if (outsideScope(scope, own.country)) return { entries, you: null };
 
   const ahead = await db
     .prepare(
       `SELECT COUNT(*) AS n FROM ${table} r JOIN profiles p ON p.id = r.profile_id
-       WHERE ${where} AND (r.time_ms < ? OR (r.time_ms = ? AND r.solved_at < ?))`,
+       WHERE ${where} AND (${SCORE} < ? OR (${SCORE} = ? AND r.solved_at < ?))`,
     )
     .bind(...args, own.value, own.value, own.at)
     .first<{ n: number }>();

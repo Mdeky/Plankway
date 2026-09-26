@@ -13,6 +13,7 @@ const PATHS = {
   auto: 'M12 3a9 9 0 100 18 9 9 0 000-18zM12 3v18',
   check: 'M5 12.5l4.5 4.5L19 7.5',
   login: 'M9 4H5v16h4M14 8l4 4-4 4M18 12H8',
+  bulb: 'M9 18h6M10 21h4M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0012 3z',
 } as const;
 
 export type IconName = keyof typeof PATHS;

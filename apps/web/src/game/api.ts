@@ -167,7 +167,10 @@ export interface BoardEntry {
   rank: number;
   name: string;
   country: string | null;
+  /** Time boards: time plus 30 s per hint. Furthest board: level. */
   value: number;
+  /** Hints included in a time (only when there were any). */
+  hints?: number;
   you?: true;
 }
 

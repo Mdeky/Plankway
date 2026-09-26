@@ -5,6 +5,7 @@ import migration2 from '../migrations/0002_endless_and_verified_times.sql?raw';
 import migration3 from '../migrations/0003_accounts_and_sessions.sql?raw';
 import migration4 from '../migrations/0004_leaderboards.sql?raw';
 import migration5 from '../migrations/0005_friends.sql?raw';
+import migration6 from '../migrations/0006_hint_penalty.sql?raw';
 import { COOKIE_NAME, createApp, OAUTH_COOKIE, RATE_LIMITS } from '../src/app.ts';
 import type { Env } from '../src/db.ts';
 import { normalizeRecoveryCode } from '../src/security.ts';
@@ -20,7 +21,7 @@ let app: ReturnType<typeof createApp>;
 let clock = NOW;
 
 beforeEach(() => {
-  env = { DB: createTestDb([migration, migration2, migration3, migration4, migration5]), HASH_PEPPER: 'test-pepper' };
+  env = { DB: createTestDb([migration, migration2, migration3, migration4, migration5, migration6]), HASH_PEPPER: 'test-pepper' };
   for (const [n, g] of puzzles) {
     env.DB.raw
       .prepare('INSERT INTO puzzles (number, date, data, difficulty) VALUES (?, ?, ?, ?)')
@@ -605,7 +606,7 @@ describe('leaderboards', () => {
   };
   const names = (board: { entries: { name: string }[] }) => board.entries.map((e) => e.name);
 
-  it('daily: fastest verified times without hints, named players only, world or one country', async () => {
+  it('daily: fastest verified times, +30 s per hint, named players only, world or one country', async () => {
     const anna = await player('Anna', 'BE');
     const bram = await player('Bram', 'NL');
     const cheat = await player('Cas', 'BE');
@@ -618,18 +619,20 @@ describe('leaderboards', () => {
     await solve(anon, 'daily', 2, 5_000);
 
     const world = (await anna.call('GET', '/api/leaderboard/daily/2')).json;
-    expect(names(world)).toEqual(['Bram', 'Anna']);
+    // Dirk: 20 s + 1 hint = 50 s, still ahead of Anna's 60 s without hints.
+    expect(names(world)).toEqual(['Bram', 'Dirk', 'Anna']);
     expect(world.entries[0]).toEqual({ rank: 1, name: 'Bram', country: 'NL', value: 30_000 });
-    expect(world.entries[1].you).toBe(true);
-    expect(world.you).toEqual({ rank: 2, value: 60_000 });
+    expect(world.entries[1]).toEqual({ rank: 2, name: 'Dirk', country: 'BE', value: 50_000, hints: 1 });
+    expect(world.entries[2].you).toBe(true);
+    expect(world.you).toEqual({ rank: 3, value: 60_000 });
     expect(JSON.stringify(world)).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-/); // no profile ids
 
     const belgium = (await anna.call('GET', '/api/leaderboard/daily/2?country=BE')).json;
-    expect(names(belgium)).toEqual(['Anna']);
-    expect(belgium.you).toEqual({ rank: 1, value: 60_000 });
+    expect(names(belgium)).toEqual(['Dirk', 'Anna']);
+    expect(belgium.you).toEqual({ rank: 2, value: 60_000 });
 
     expect((await cheat.call('GET', '/api/leaderboard/daily/2')).json.you).toEqual({ rank: null, reason: 'unverified' });
-    expect((await helped.call('GET', '/api/leaderboard/daily/2')).json.you).toEqual({ rank: null, reason: 'hints' });
+    expect((await helped.call('GET', '/api/leaderboard/daily/2')).json.you).toEqual({ rank: 2, value: 50_000 });
     expect((await anon.call('GET', '/api/leaderboard/daily/2')).json.you).toEqual({ rank: null, reason: 'no-name' });
     expect((await anna.call('GET', '/api/leaderboard/daily/1')).json.you).toEqual({ rank: null, reason: 'not-played' });
     expect((await client().call('GET', '/api/leaderboard/daily/2')).json.you).toBeNull();
@@ -670,7 +673,7 @@ describe('leaderboards', () => {
     expect(names((await first.call('GET', '/api/leaderboard/endless/run')).json)).toEqual(['First', 'Second']);
   });
 
-  it('per endless level: fastest verified time without hints', async () => {
+  it('per endless level: fastest verified time, +30 s per hint', async () => {
     const quick = await player('Quick');
     const slow = await player('Slow');
     const helped = await player('Helped');
@@ -679,7 +682,12 @@ describe('leaderboards', () => {
     await solve(helped, 'endless', 1, 10_000, { hints: 2 });
     const board = (await slow.call('GET', '/api/leaderboard/endless/level/1')).json;
     expect(board.level).toBe(1);
-    expect(names(board)).toEqual(['Quick', 'Slow']);
+    // Helped: 10 s + 2 hints = 70 s.
+    expect(board.entries.map((e: { name: string; value: number; hints?: number }) => [e.name, e.value, e.hints])).toEqual([
+      ['Quick', 25_000, undefined],
+      ['Slow', 50_000, undefined],
+      ['Helped', 70_000, 2],
+    ]);
     expect(board.you).toEqual({ rank: 2, value: 50_000 });
   });
 

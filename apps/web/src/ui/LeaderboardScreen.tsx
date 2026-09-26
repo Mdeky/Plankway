@@ -5,6 +5,7 @@ import { loadEndlessProgress } from '../game/storage.ts';
 import { getLang, t, type MessageKey } from '../i18n.ts';
 import { goBack } from '../route.ts';
 import { formatTime } from './format.ts';
+import { Icon } from './icons.tsx';
 
 type Tab = 'daily' | 'run' | 'level';
 
@@ -16,7 +17,6 @@ function boardTime(ms: number): string {
 const REASON: Record<string, MessageKey> = {
   'no-name': 'board.reason.no-name',
   'not-played': 'board.reason.not-played',
-  hints: 'board.reason.hints',
   unverified: 'board.reason.unverified',
 };
 
@@ -139,7 +139,16 @@ export function LeaderboardScreen() {
                       {e.country}
                     </span>
                   )}
-                  <span class="board-value">{value(e.value)}</span>
+                  <span class="board-value">
+                    {e.hints ? (
+                      <span class="board-hints" title={t('board.hintsIncluded', { n: e.hints })}>
+                        <Icon name="bulb" />
+                        {e.hints}
+                        <span class="sr-only"> {t('board.hintsIncluded', { n: e.hints })}</span>
+                      </span>
+                    ) : null}
+                    {value(e.value)}
+                  </span>
                 </li>
               ))}
             </ol>

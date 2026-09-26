@@ -178,9 +178,10 @@ Optional. Without an account everything keeps working with the anonymous profile
 
 Only players with an account and a chosen name appear; anonymous progress counts once it moves
 into an account. Each board is world-wide or `?country=XX`, shows the top 50 and the player's own
-place (or why they're not on it: `no-name`, `not-played`, `hints`, `unverified`).
+place (or why they're not on it: `no-name`, `not-played`, `unverified`).
 
-- `GET /api/leaderboard/daily/:number`: fastest verified time without hints.
+- `GET /api/leaderboard/daily/:number`: fastest verified time; every hint adds 30 seconds (the entry
+  shows how many hints are included).
 - `GET /api/leaderboard/endless/level/:level`: same, per endless level.
 - `GET /api/leaderboard/endless/run`: furthest endless level, counted as the unbroken run from
   level 1 (hints allowed). Kept in `profiles.endless_run` whenever endless results are added or
