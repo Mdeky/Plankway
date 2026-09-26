@@ -19,11 +19,15 @@ export interface Provider {
 /** Providers with credentials configured on this deployment. */
 export function configuredProviders(env: Env): Provider[] {
   const out: Provider[] = [];
-  if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) {
+  // Secrets pasted into a terminal prompt can pick up spaces or control characters; a
+  // malformed id hides the button instead of sending players to a broken sign-in.
+  const googleId = env.GOOGLE_CLIENT_ID?.trim();
+  const googleSecret = env.GOOGLE_CLIENT_SECRET?.trim();
+  if (googleId && googleSecret && /^[\w-]+\.apps\.googleusercontent\.com$/.test(googleId) && /^[\x21-\x7e]{10,}$/.test(googleSecret)) {
     out.push({
       id: 'google',
-      clientId: env.GOOGLE_CLIENT_ID,
-      clientSecret: env.GOOGLE_CLIENT_SECRET,
+      clientId: googleId,
+      clientSecret: googleSecret,
       authorizeEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
       tokenEndpoint: 'https://oauth2.googleapis.com/token',
       issuers: ['https://accounts.google.com', 'accounts.google.com'],

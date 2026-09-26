@@ -30,7 +30,7 @@ beforeEach(() => {
       .run(level, serializePuzzle(g.puzzle), g.report.score);
   }
   clock = NOW;
-  google = { sub: 'google-user-1', aud: 'test-client', iss: 'https://accounts.google.com', expIn: 3600, status: 200 };
+  google = { sub: 'google-user-1', aud: 'test-client.apps.googleusercontent.com', iss: 'https://accounts.google.com', expIn: 3600, status: 200 };
   tokenRequests.length = 0;
   app = createApp({ now: () => clock, fetch: fakeGoogle });
 });
@@ -98,7 +98,7 @@ async function signIn(c: ReturnType<typeof client>, opts: { returnTo?: string; s
 }
 
 const withGoogle = () => {
-  env.GOOGLE_CLIENT_ID = 'test-client';
+  env.GOOGLE_CLIENT_ID = 'test-client.apps.googleusercontent.com';
   env.GOOGLE_CLIENT_SECRET = 'test-secret';
 };
 const count = (table: string) => Number(env.DB.raw.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get()!.n);
@@ -413,6 +413,19 @@ describe('sign in with Google', () => {
     expect((await client().call('GET', '/api/auth/providers')).json).toEqual({ providers: ['google'] });
   });
 
+  it('hides the button when a secret was pasted wrong (e.g. a Ctrl+V character)', async () => {
+    withGoogle();
+    env.GOOGLE_CLIENT_ID = '\x16';
+    expect((await client().call('GET', '/api/auth/providers')).json).toEqual({ providers: [] });
+    withGoogle();
+    env.GOOGLE_CLIENT_SECRET = '\x16';
+    expect((await client().call('GET', '/api/auth/providers')).json).toEqual({ providers: [] });
+    // Stray whitespace around a correct value is fine.
+    withGoogle();
+    env.GOOGLE_CLIENT_ID = ' test-client.apps.googleusercontent.com\n';
+    expect((await client().call('GET', '/api/auth/providers')).json).toEqual({ providers: ['google'] });
+  });
+
   it('sends the player to Google with PKCE, a nonce and only the openid scope', async () => {
     withGoogle();
     const c = client();
@@ -420,7 +433,7 @@ describe('sign in with Google', () => {
     const to = new URL(start.headers.get('Location')!);
     expect(to.origin + to.pathname).toBe('https://accounts.google.com/o/oauth2/v2/auth');
     expect(to.searchParams.get('scope')).toBe('openid');
-    expect(to.searchParams.get('client_id')).toBe('test-client');
+    expect(to.searchParams.get('client_id')).toBe('test-client.apps.googleusercontent.com');
     expect(to.searchParams.get('code_challenge_method')).toBe('S256');
     expect(to.searchParams.get('redirect_uri')).toBe('http://localhost/api/auth/google/callback');
     expect(to.searchParams.get('state')).toMatch(/^[\w-]{40,}$/);
@@ -492,7 +505,7 @@ describe('sign in with Google', () => {
       const c = client();
       expect((await signIn(c)).back.searchParams.get('login')).toBe('error');
       expect(c.jar.has(COOKIE_NAME)).toBe(false);
-      google = { sub: 'google-user-1', aud: 'test-client', iss: 'https://accounts.google.com', expIn: 3600, status: 200 };
+      google = { sub: 'google-user-1', aud: 'test-client.apps.googleusercontent.com', iss: 'https://accounts.google.com', expIn: 3600, status: 200 };
     }
     expect(count('identities')).toBe(0);
   });
