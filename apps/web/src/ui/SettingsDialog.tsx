@@ -1,89 +1,78 @@
 import { useState } from 'preact/hooks';
 import { getLang, t, type Lang } from '../i18n.ts';
 import { isSoundOn, setSoundOn } from '../game/sound.ts';
-import { getThemePref, setThemePref, type ThemePref } from '../game/theme.ts';
 import { adsEnabled } from '../ads/config.ts';
 import { openPrivacyChoices } from '../ads/loader.ts';
 import { Dialog } from './Dialog.tsx';
+import { Icon } from './icons.tsx';
+import { ThemeSwitch } from './ThemeSwitch.tsx';
 
 interface Props {
   onClose(): void;
   onLangChange(lang: Lang): void;
 }
 
+const LANGS: [Lang, string][] = [
+  ['en', 'English'],
+  ['nl', 'Nederlands'],
+];
+
+/** Same look as the profile: grouped controls, a switch for sound, rows for the rest. */
 export function SettingsDialog({ onClose, onLangChange }: Props) {
-  const [theme, setTheme] = useState<ThemePref>(getThemePref);
   const [sound, setSound] = useState(isSoundOn);
   const lang = getLang();
 
-  const themes: [ThemePref, string][] = [
-    ['system', t('settings.themeSystem')],
-    ['light', t('settings.themeLight')],
-    ['dark', t('settings.themeDark')],
-  ];
-  const langs: [Lang, string][] = [
-    ['en', 'English'],
-    ['nl', 'Nederlands'],
-  ];
-
   return (
-    <Dialog title={t('settings.title')} onClose={onClose}>
-      <fieldset class="choice">
-        <legend>{t('settings.theme')}</legend>
-        {themes.map(([value, label]) => (
-          <label key={value}>
+    <Dialog title={t('settings.title')} onClose={onClose} class="profile-dialog">
+      <div class="profile-view">
+        <section class="settings-group">
+          <h3 class="settings-label">{t('settings.theme')}</h3>
+          <ThemeSwitch />
+        </section>
+
+        <section class="settings-group">
+          <h3 class="settings-label">{t('settings.language')}</h3>
+          <div class="segmented" role="group" aria-label={t('settings.language')}>
+            {LANGS.map(([value, label]) => (
+              <button key={value} lang={value} class={lang === value ? 'active' : ''} aria-pressed={lang === value} onClick={() => onLangChange(value)}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <div class="profile-menu">
+          <label class="menu-item">
+            <Icon name="volume" />
+            <span class="menu-label">{t('settings.soundOn')}</span>
             <input
-              type="radio"
-              name="theme"
-              checked={theme === value}
-              onChange={() => {
-                setTheme(value);
-                setThemePref(value);
+              type="checkbox"
+              role="switch"
+              class="switch"
+              checked={sound}
+              onChange={(e) => {
+                const on = (e.target as HTMLInputElement).checked;
+                setSound(on);
+                setSoundOn(on);
               }}
             />
-            {label}
           </label>
-        ))}
-      </fieldset>
+          {(adsEnabled('board') || adsEnabled('result')) && (
+            <button class="menu-item" onClick={() => openPrivacyChoices()}>
+              <Icon name="shield" />
+              <span class="menu-label">{t('settings.privacy')}</span>
+              <Icon name="chevron" class="menu-chevron" />
+            </button>
+          )}
+        </div>
 
-      <fieldset class="choice">
-        <legend>{t('settings.sound')}</legend>
-        <label>
-          <input
-            type="checkbox"
-            checked={sound}
-            onChange={(e) => {
-              const on = (e.target as HTMLInputElement).checked;
-              setSound(on);
-              setSoundOn(on);
-            }}
-          />
-          {t('settings.soundOn')}
-        </label>
-      </fieldset>
+        <p class="muted settings-note">{t('settings.motion')}</p>
 
-      <fieldset class="choice">
-        <legend>{t('settings.language')}</legend>
-        {langs.map(([value, label]) => (
-          <label key={value} lang={value}>
-            <input type="radio" name="lang" checked={lang === value} onChange={() => onLangChange(value)} />
-            {label}
-          </label>
-        ))}
-      </fieldset>
-
-      <p class="muted">{t('settings.motion')}</p>
-
-      {(adsEnabled('board') || adsEnabled('result')) && (
-        <button class="btn" onClick={() => openPrivacyChoices()}>
-          {t('settings.privacy')}
-        </button>
-      )}
-
-      <div class="dialog-actions">
-        <button class="btn primary" onClick={onClose}>
-          {t('common.close')}
-        </button>
+        <div class="dialog-actions">
+          <button class="btn primary" onClick={onClose}>
+            {t('common.close')}
+          </button>
+        </div>
       </div>
     </Dialog>
   );

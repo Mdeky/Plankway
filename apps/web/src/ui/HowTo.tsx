@@ -3,13 +3,15 @@ import { t, type MessageKey } from '../i18n.ts';
 import { navigate } from '../route.ts';
 import { DemoBoard, demoPuzzle, type DemoStep } from './DemoBoard.tsx';
 import { Dialog } from './Dialog.tsx';
+import { PracticeBoard } from './PracticeBoard.tsx';
 
 interface Slide {
   title: MessageKey;
   body: MessageKey;
   extra?: MessageKey;
-  puzzle: ReturnType<typeof demoPuzzle>;
-  steps: DemoStep[];
+  /** Animated example; absent on the practice slide, where the player plays. */
+  puzzle?: ReturnType<typeof demoPuzzle>;
+  steps?: DemoStep[];
 }
 
 // Island numbers in each demo follow reading order (row by row, left to right).
@@ -63,6 +65,7 @@ const SLIDES: Slide[] = [
       { bridges: [[0, 1, 1], [1, 3, 1], [3, 2, 1]], ms: 2600 },
     ],
   },
+  { title: 'tutorial.6.title', body: 'tutorial.6.body' },
 ];
 
 /** Short slide show with animated example boards. Shown on the first visit and from the menu. */
@@ -86,14 +89,15 @@ export function HowTo({ onClose }: { onClose(): void }) {
     <Dialog title={t('howto.title')} onClose={onClose}>
       <div
         class="tutorial"
-        onPointerDown={(ev) => (swipe.current = ev.clientX)}
+        // Swipe between slides, but not while building bridges on the practice board.
+        onPointerDown={(ev) => (swipe.current = (ev.target as Element).closest('canvas') ? null : ev.clientX)}
         onPointerUp={(ev) => {
           const dx = swipe.current === null ? 0 : ev.clientX - swipe.current;
           swipe.current = null;
           if (Math.abs(dx) > 40) go(index + (dx < 0 ? 1 : -1));
         }}
       >
-        <DemoBoard key={index} puzzle={slide.puzzle} steps={slide.steps} />
+        {slide.puzzle && slide.steps ? <DemoBoard key={index} puzzle={slide.puzzle} steps={slide.steps} /> : <PracticeBoard />}
         <div class="tutorial-text" aria-live="polite">
           <h3>{t(slide.title)}</h3>
           <p>{t(slide.body)}</p>

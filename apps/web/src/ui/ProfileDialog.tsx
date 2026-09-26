@@ -10,13 +10,13 @@ import {
   type Account,
 } from '../game/api.ts';
 import { deleteAllData, recoverWithCode, signOutDevice } from '../game/sync.ts';
-import { getThemePref, setThemePref, type ThemePref } from '../game/theme.ts';
 import { getLang, t, type MessageKey } from '../i18n.ts';
 import { navigate, type Route } from '../route.ts';
 import { AccountForm } from './AccountForm.tsx';
 import { Dialog } from './Dialog.tsx';
 import { FriendsSection } from './FriendsSection.tsx';
 import { Icon, type IconName } from './icons.tsx';
+import { ThemeSwitch } from './ThemeSwitch.tsx';
 
 type View = 'menu' | 'account' | 'friends' | 'transfer' | 'delete' | 'signout';
 
@@ -228,33 +228,6 @@ function Callout({ title, text, children }: { title: string; text: string; child
       <p class="callout-title">{title}</p>
       <p class="callout-text">{text}</p>
       {children}
-    </div>
-  );
-}
-
-function ThemeSwitch() {
-  const [pref, setPref] = useState<ThemePref>(getThemePref);
-  const options: [ThemePref, IconName, MessageKey][] = [
-    ['system', 'auto', 'profile.theme.auto'],
-    ['light', 'sun', 'profile.theme.light'],
-    ['dark', 'moon', 'profile.theme.dark'],
-  ];
-  return (
-    <div class="segmented theme-switch" role="group" aria-label={t('settings.theme')}>
-      {options.map(([value, icon, label]) => (
-        <button
-          key={value}
-          class={pref === value ? 'active' : ''}
-          aria-pressed={pref === value}
-          onClick={() => {
-            setPref(value);
-            setThemePref(value);
-          }}
-        >
-          <Icon name={icon} />
-          {t(label)}
-        </button>
-      ))}
     </div>
   );
 }
